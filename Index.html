@@ -12,10 +12,12 @@
       margin: 0;
       overflow: hidden;
     }
+
     #wrapper {
       display: flex;
       height: 100vh;
     }
+
     #filters {
       width: 14%;
       background: #f8f9fa;
@@ -23,24 +25,29 @@
       overflow-y: auto;
       border-right: 2px solid #3f8384;
     }
+
     #reportArea {
       width: 86%;
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
+
     #reportTable {
       flex: 1;
       overflow-x: auto;
       overflow-y: auto;
     }
+
     h4, label {
       color: #3f8384;
     }
+
     .tabulator .tabulator-header .tabulator-col {
       background-color: #3f8384;
       color: white;
     }
+
     .tabulator .tabulator-row .tabulator-cell.numeric {
       text-align: right;
     }
@@ -90,16 +97,15 @@
         headerFilter: false,
         cssClass: numericCols.includes(key) ? 'numeric' : '',
         bottomCalc: subtotalCols.includes(key) ? 'sum' : undefined,
-        width: 150, // Cố định độ rộng để không bị co
-        frozen: false,
+        width: 180, // Mỗi cột rộng 180px
         sorter: numericCols.includes(key) ? 'number' : 'string',
-        resizable: true,
+        resizable: true
       }));
 
       const table = new Tabulator("#reportTable", {
         data: data,
         columns: columns,
-        layout: "fitData", // fitData để giữ nguyên kích thước cột
+        layout: "fitDataTable", // không co chiều ngang, giữ nguyên độ rộng cột
         responsiveLayout: false,
         height: "100%",
         movableColumns: true,
