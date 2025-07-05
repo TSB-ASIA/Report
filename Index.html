@@ -53,7 +53,7 @@
       <input id="dateRange" class="form-control mb-2" />
     </div>
     <div id="reportArea">
-      <div id="reportTable"></div>
+      <div id="reportTable">Đang tải dữ liệu...</div>
     </div>
   </div>
 
@@ -70,15 +70,22 @@
       const url = `${API_URL}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
       fetch(url)
         .then(response => response.json())
-        .then(data => renderData(data))
+        .then(data => {
+          if (data.error) {
+            document.getElementById("reportTable").innerText = "❌ " + data.error;
+            console.error("Lỗi từ WebApp:", data.error);
+            return;
+          }
+          renderData(data);
+        })
         .catch(error => {
           console.error("Lỗi khi lấy dữ liệu:", error);
-          document.getElementById("reportTable").innerText = "Lỗi tải dữ liệu.";
+          document.getElementById("reportTable").innerText = "❌ Lỗi tải dữ liệu.";
         });
     }
 
     function renderData(data) {
-      if (!data || data.length === 0) {
+      if (!Array.isArray(data) || data.length === 0) {
         document.getElementById("reportTable").innerText = "Không có dữ liệu phù hợp.";
         return;
       }
@@ -96,7 +103,7 @@
         resizable: true,
       }));
 
-      const table = new Tabulator("#reportTable", {
+      new Tabulator("#reportTable", {
         data: data,
         columns: columns,
         layout: "fitDataStretch",
@@ -113,10 +120,14 @@
       });
     }
 
-    window.onload = function() {
+    window.onload = function () {
       const email = prompt("Nhập email:");
       const token = prompt("Nhập mật khẩu/token:");
-      fetchData(email, token);
+      if (email && token) {
+        fetchData(email, token);
+      } else {
+        document.getElementById("reportTable").innerText = "⚠️ Bạn cần nhập đầy đủ email và mật khẩu.";
+      }
 
       new Litepicker({
         element: document.getElementById("dateRange"),
