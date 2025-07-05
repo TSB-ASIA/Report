@@ -25,13 +25,14 @@
     }
     #reportArea {
       width: 86%;
-      overflow: hidden;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
     #reportTable {
       flex: 1;
-      overflow: auto;
+      overflow-x: auto;
+      overflow-y: auto;
     }
     h4, label {
       color: #3f8384;
@@ -53,7 +54,7 @@
       <input id="dateRange" class="form-control mb-2" />
     </div>
     <div id="reportArea">
-      <div id="reportTable">Đang tải dữ liệu...</div>
+      <div id="reportTable"></div>
     </div>
   </div>
 
@@ -70,22 +71,15 @@
       const url = `${API_URL}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
       fetch(url)
         .then(response => response.json())
-        .then(data => {
-          if (data.error) {
-            document.getElementById("reportTable").innerText = "❌ " + data.error;
-            console.error("Lỗi từ WebApp:", data.error);
-            return;
-          }
-          renderData(data);
-        })
+        .then(data => renderData(data))
         .catch(error => {
           console.error("Lỗi khi lấy dữ liệu:", error);
-          document.getElementById("reportTable").innerText = "❌ Lỗi tải dữ liệu.";
+          document.getElementById("reportTable").innerText = "Lỗi tải dữ liệu.";
         });
     }
 
     function renderData(data) {
-      if (!Array.isArray(data) || data.length === 0) {
+      if (!data || data.length === 0) {
         document.getElementById("reportTable").innerText = "Không có dữ liệu phù hợp.";
         return;
       }
@@ -96,38 +90,28 @@
         headerFilter: false,
         cssClass: numericCols.includes(key) ? 'numeric' : '',
         bottomCalc: subtotalCols.includes(key) ? 'sum' : undefined,
-        widthGrow: 1,
-        frozen: key === Object.keys(data[0])[0],
+        width: 150, // Cố định độ rộng để không bị co
+        frozen: false,
         sorter: numericCols.includes(key) ? 'number' : 'string',
-        visible: true,
         resizable: true,
       }));
 
-      new Tabulator("#reportTable", {
+      const table = new Tabulator("#reportTable", {
         data: data,
         columns: columns,
-        layout: "fitDataStretch",
-        movableColumns: true,
+        layout: "fitData", // fitData để giữ nguyên kích thước cột
+        responsiveLayout: false,
         height: "100%",
-        responsiveLayout: true,
-        frozenRows: 1,
-        columnDefaults: {
-          resizable: true
-        },
-        pagination: false,
+        movableColumns: true,
         virtualDom: true,
         resizableRows: false,
       });
     }
 
-    window.onload = function () {
+    window.onload = function() {
       const email = prompt("Nhập email:");
       const token = prompt("Nhập mật khẩu/token:");
-      if (email && token) {
-        fetchData(email, token);
-      } else {
-        document.getElementById("reportTable").innerText = "⚠️ Bạn cần nhập đầy đủ email và mật khẩu.";
-      }
+      fetchData(email, token);
 
       new Litepicker({
         element: document.getElementById("dateRange"),
