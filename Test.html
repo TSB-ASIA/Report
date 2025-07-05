@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo Cáo Bán Hàng Chuyên Nghiệp</title>
+
+    <!-- Thư viện Tabulator & Giao diện Bootstrap 5 -->
+    <link href="https://unpkg.com/tabulator-tables@5.6.1/dist/css/tabulator_bootstrap5.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.6.1/dist/js/tabulator.min.js"></script>
+
+    <!-- Thư viện Litepicker cho bộ lọc ngày tháng -->
+    <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
+
+    <style>
+        :root {
+            --main-color: #3f8384;
+            --main-color-light: #e0f2f2;
+            --header-text-color: #ffffff;
+            --border-color: #ddd;
+            --danger-color: #d9534f;
+        }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f7f6; overflow: hidden; }
+        .report-container { display: flex; height: 100vh; }
+        .filters-sidebar { flex: 1; min-width: 280px; max-width: 350px; background-color: #fff; padding: 20px; border-right: 1px solid var(--border-color); overflow-y: auto; display: flex; flex-direction: column; }
+        .filters-sidebar h2 { color: var(--main-color); margin-top: 0; border-bottom: 2px solid var(--main-color); padding-bottom: 10px; font-size: 1.5rem; display: flex; align-items: center; gap: 8px;}
+        .filter-group { margin-bottom: 20px; }
+        .filter-group label { font-weight: bold; display: block; margin-bottom: 8px; color: #333; }
+        .filter-group input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .checkbox-list { max-height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 4px; background-color: #fafafa; }
+        .checkbox-list div { display: flex; align-items: center; margin-bottom: 5px; }
+        .checkbox-list label { font-weight: normal; margin-left: 5px; cursor: pointer; flex-grow: 1; }
+        .main-content { flex: 7; padding: 20px; display: flex; flex-direction: column; overflow: hidden; }
+        .main-content h1 { color: var(--main-color); margin-top: 0; }
+        .report-controls { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
+        .report-controls button { padding: 8px 15px; border: none; background-color: var(--main-color); color: white; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; }
+        .report-controls button:hover { opacity: 0.9; }
+        #clear-filters-btn { background-color: var(--danger-color); }
+        #report-table { border: 1px solid var(--border-color); border-radius: 5px; flex-grow: 1; }
+        .tabulator { border: none; }
+        .tabulator .tabulator-header { background-color: var(--main-color); color: var(--header-text-color); font-weight: bold; }
+        .tabulator .tabulator-calcs-top { background-color: var(--main-color-light) !important; font-weight: bold; border-bottom: 2px solid var(--main-color) !important; }
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; justify-content: center; align-items: center; z-index: 9999; flex-direction: column; }
+        .toggle-cols-container { position: relative; }
+        .cols-list-dropdown { display: none; position: absolute; top: 100%; left: 0; margin-top: 5px; background-color: #fff; border: 1px solid #ddd; padding: 10px; z-index: 100; max-height: 300px; overflow-y: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 4px; }
+        .cols-list-dropdown.show { display: block; }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay"><p>Đang tải dữ liệu...</p></div>
+    <div class="report-container" style="visibility: hidden;">
+        <aside class="filters-sidebar">
+            <h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>Bộ lọc</h2>
+            <div class="filter-group"><label for="date-range-picker">Ngày giao dịch</label><input type="text" id="date-range-picker"></div>
+            <div class="filter-group"><label>Năm</label><div class="checkbox-list" id="year-filter"></div></div>
+            <div class="filter-group"><label>Quý</label><div class="checkbox-list" id="quarter-filter"></div></div>
+            <div class="filter-group"><label for="customer-filter">Khách hàng</label><input type="text" id="customer-filter" placeholder="Nhập tên khách hàng..."></div>
+            <div class="filter-group"><label>Vùng miền</label><div class="checkbox-list" id="region-filter"></div></div>
+            <div class="filter-group"><label>Salesman</label><div class="checkbox-list" id="salesman-filter"></div></div>
+            <div class="filter-group"><label>Sản phẩm</label><div class="checkbox-list" id="product-filter"></div></div>
+            <div class="filter-group"><label>Loại xuất</label><div class="checkbox-list" id="export-type-filter"></div></div>
+            <div class="filter-group"><label>Nhóm sản Phẩm</label><div class="checkbox-list" id="product-group-filter"></div></div>
+        </aside>
+        <main class="main-content">
+            <h1>Báo Cáo Bán Hàng</h1>
+            <div class="report-controls">
+                <button id="export-csv"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Xuất CSV</button>
+                <div class="toggle-cols-container">
+                    <button id="toggle-cols-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>Ẩn/Hiện Cột</button>
+                    <div id="cols-list-dropdown" class="cols-list-dropdown"></div>
+                </div>
+                <button id="clear-filters-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Xóa Bộ Lọc</button>
+            </div>
+            <div id="report-table"></div>
+        </main>
+    </div>
+
+<script>
+const DATA_URL = "https://script.google.com/macros/s/AKfycbxeY29YFtEe2PTnfbXYPFmCZKNTN-UL0gmq9Aqt9DdWHS9_BT0UTEISRxht2IxFZaWFMw/exec";
+let table, datePicker;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const reportContainer = document.querySelector('.report-container');
+    try {
+        const response = await fetch(DATA_URL);
+        if (!response.ok) throw new Error(`Lỗi máy chủ: ${response.status} ${response.statusText}`);
+        const jsonResponse = await response.json();
+        const dataArray = jsonResponse.data || jsonResponse;
+        if (!dataArray || dataArray.length === 0) throw new Error("Không có dữ liệu.");
+
+        const rawData = processData(dataArray);
+        reportContainer.style.visibility = 'visible';
+        initializeTable(rawData);
+        populateFilters(rawData);
+        setupControlsAndEvents();
+        loadingOverlay.style.display = 'none';
+    } catch (error) {
+        loadingOverlay.innerHTML = `<p style="color:var(--danger-color);">Lỗi: ${error.message}</p>`;
+    }
+});
+
+function processData(data) {
+    const numericCols = ['Số lượng', 'Doanh thu thuần', 'Đơn giá', 'COGS', 'Lãi gộp', 'Chi phí giao hàng', 'Lãi vay', 'Giá bán net', '% Lãi gộp tiêu chuẩn', 'Giá bán tiêu chuẩn', 'Lãi gộp tính lương B2B', 'LK tiêu chuẩn', '% Điều chỉnh trên giá', '% Điều chỉnh dưới giá', 'Điều chỉnh lương khoán KD', 'Lương khoán tối thiểu', 'Lương khoán/kg', 'LK Đức HM', 'Lương khoán sales', '% lương Khoán'];
+    return data.map(row => {
+        // =========================================================================
+        // TẠO CỘT PHỤ ĐỂ LỌC
+        // =========================================================================
+        if (row["Ngày giao dịch"] && typeof row["Ngày giao dịch"] === 'string') {
+            const parts = row["Ngày giao dịch"].split('/');
+            if (parts.length === 3) {
+                const dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
+                if (!isNaN(dateObj)) {
+                    row["Ngày giao dịch"] = dateObj;
+                    // Tạo cột phụ
+                    row["Năm"] = dateObj.getFullYear();
+                    row["Quý"] = `${dateObj.getFullYear()}-Q${Math.floor(dateObj.getMonth() / 3) + 1}`;
+                }
+            }
+        }
+        numericCols.forEach(colName => {
+            if (row.hasOwnProperty(colName)) {
+                let val = row[colName];
+                if (val === null || val === undefined || String(val).trim() === "") {
+                    row[colName] = null; return;
+                }
+                let cleanStr = String(val).replace(/,/g, '');
+                let isPercent = cleanStr.includes('%');
+                if (isPercent) cleanStr = cleanStr.replace(/%/g, '');
+                let num = parseFloat(cleanStr);
+                if (!isNaN(num)) row[colName] = isPercent ? num / 100 : num;
+                else row[colName] = null;
+            }
+        });
+        return row;
+    });
+}
+
+function initializeTable(data) {
+    const headers = Object.keys(data[0]);
+    const numberFormatter = (cell) => cell.getValue()?.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) ?? "";
+    const percentFormatter = (cell) => cell.getValue() ? `${(cell.getValue() * 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%` : "";
+    const weightedAvgCalc = (values, data) => {
+        let totalWeighted = 0, totalBase = 0;
+        data.forEach(row => {
+            const weightedValue = parseFloat(row['Lương khoán sales']);
+            const baseValue = parseFloat(row['Doanh thu thuần']);
+            if (!isNaN(weightedValue) && !isNaN(baseValue) && baseValue !== 0) {
+                totalWeighted += weightedValue; totalBase += baseValue;
+            }
+        });
+        return totalBase === 0 ? 0 : totalWeighted / totalBase;
+    };
+    const columnDefinitions = headers.map(header => {
+        let colDef = { title: header, field: header, headerFilter: "input", minWidth: 150 };
+        // Ẩn các cột phụ
+        if (header === "Năm" || header === "Quý") {
+            colDef.visible = false;
+        }
+        switch(header) {
+            case "Ngày giao dịch":
+                colDef.width = 150; colDef.frozen = true; colDef.formatter = "datetime"; colDef.formatterParams = { outputFormat: "DD/MM/YYYY" }; break;
+            case "Khách hàng": colDef.width = 250; break;
+            case "Sản phẩm": colDef.width = 200; break;
+            case 'Số lượng': case 'Doanh thu thuần': case 'Đơn giá': case 'COGS': case 'Lãi gộp': case 'Chi phí giao hàng': case 'Lãi vay': case 'Giá bán net': case '% Lãi gộp tiêu chuẩn': case 'Giá bán tiêu chuẩn': case 'Lãi gộp tính lương B2B': case 'LK tiêu chuẩn': case '% Điều chỉnh trên giá': case '% Điều chỉnh dưới giá': case 'Điều chỉnh lương khoán KD': case 'Lương khoán tối thiểu': case 'Lương khoán/kg': case 'LK Đức HM': case 'Lương khoán sales': case '% lương Khoán':
+                colDef.hozAlign = "right"; colDef.formatter = header.includes('%') ? percentFormatter : numberFormatter; break;
+        }
+        const subtotalCols = ['Số lượng', 'Doanh thu thuần', 'COGS', 'Lãi gộp', 'Chi phí giao hàng', 'Lãi vay', 'Lãi gộp tính lương B2B', 'LK Đức HM', 'Lương khoán sales'];
+        if (subtotalCols.includes(header)) {
+            colDef.bottomCalc = "sum"; colDef.bottomCalcFormatter = numberFormatter;
+        }
+        if (header === '% lương Khoán') {
+            colDef.bottomCalc = weightedAvgCalc; colDef.bottomCalcFormatter = percentFormatter;
+        }
+        return colDef;
+    });
+    table = new Tabulator("#report-table", {
+        data: data, height: "100%", layout: "fitDataFill", movableColumns: true, resizableColumnFit: true, columnCalcs: "top", columns: columnDefinitions, initialSort: [{ column: "Ngày giao dịch", dir: "desc" }]
+    });
+    setTimeout(() => { if (table) table.redraw(true); }, 100);
+}
+
+function populateFilters(data) {
+    const years = new Set(), quarters = new Set(), regions = new Set(), salesmen = new Set(), products = new Set(), exportTypes = new Set(), productGroups = new Set();
+    data.forEach(row => {
+        if (row["Năm"]) years.add(row["Năm"]);
+        if (row["Quý"]) quarters.add(row["Quý"]);
+        if (row["Vùng miền"]) regions.add(row["Vùng miền"]);
+        if (row["Salesman"]) salesmen.add(row["Salesman"]);
+        if (row["Sản phẩm"]) products.add(row["Sản phẩm"]);
+        if (row["Loại xuất"]) exportTypes.add(row["Loại xuất"]);
+        if (row["Nhóm sản Phẩm"]) productGroups.add(row["Nhóm sản Phẩm"]);
+    });
+    const createCheckboxes = (containerId, valuesSet) => {
+        const container = document.getElementById(containerId); container.innerHTML = '';
+        Array.from(valuesSet).sort().forEach(value => {
+            const id = `${containerId}-${String(value)}`.replace(/[\s\W]+/g, '-');
+            container.innerHTML += `<div><input type="checkbox" id="${id}" value="${value}"><label for="${id}">${value}</label></div>`;
+        });
+    };
+    createCheckboxes('year-filter', years);
+    createCheckboxes('quarter-filter', quarters);
+    createCheckboxes('region-filter', regions);
+    createCheckboxes('salesman-filter', salesmen);
+    createCheckboxes('product-group-filter', productGroups);
+    createCheckboxes('product-filter', products);
+    createCheckboxes('export-type-filter', exportTypes);
+}
+
+function applyAllFilters() {
+    if (!table) return;
+    const allFilters = [];
+    if (datePicker && datePicker.getStartDate() && datePicker.getEndDate()) {
+        let startDate = datePicker.getStartDate(); startDate.setHours(0, 0, 0, 0);
+        let endDate = datePicker.getEndDate(); endDate.setHours(23, 59, 59, 999);
+        allFilters.push({ field: "Ngày giao dịch", type: ">=", value: startDate });
+        allFilters.push({ field: "Ngày giao dịch", type: "<=", value: endDate });
+    }
+    const customerFilterValue = document.getElementById('customer-filter').value;
+    if (customerFilterValue) {
+        allFilters.push({ field: "Khách hàng", type: "like", value: customerFilterValue });
+    }
+    // =========================================================================
+    // HÀM LỌC ĐƠN GIẢN HÓA
+    // =========================================================================
+    const addCheckboxFilter = (containerId, fieldName) => {
+        const checked = Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(cb => cb.value);
+        if (checked.length > 0) {
+            allFilters.push({ field: fieldName, type: "in", value: checked });
+        }
+    };
+    addCheckboxFilter('year-filter', 'Năm');
+    addCheckboxFilter('quarter-filter', 'Quý');
+    addCheckboxFilter('region-filter', 'Vùng miền');
+    addCheckboxFilter('salesman-filter', 'Salesman');
+    addCheckboxFilter('product-filter', 'Sản phẩm');
+    addCheckboxFilter('export-type-filter', 'Loại xuất');
+    addCheckboxFilter('product-group-filter', 'Nhóm sản Phẩm');
+    table.setFilter(allFilters);
+}
+
+function setupControlsAndEvents() {
+    datePicker = new Litepicker({
+        element: document.getElementById('date-range-picker'), singleMode: false, format: 'DD/MM/YYYY',
+        setup: (picker) => { picker.on('selected', applyAllFilters); },
+    });
+    document.getElementById('export-csv').addEventListener('click', () => table.download("csv", "bao-cao-ban-hang.csv", { bom: true }));
+    const debounce = (func, delay = 400) => {
+        let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); };
+    };
+    document.getElementById('customer-filter').addEventListener('keyup', debounce(applyAllFilters));
+    const filterContainers = ['year-filter', 'quarter-filter', 'region-filter', 'salesman-filter', 'product-filter', 'export-type-filter', 'product-group-filter'];
+    filterContainers.forEach(id => document.getElementById(id).addEventListener('change', applyAllFilters));
+
+    document.getElementById('clear-filters-btn').addEventListener('click', () => {
+        if (table) table.clearFilter(true);
+        datePicker.clearSelection();
+        document.getElementById('customer-filter').value = '';
+        document.querySelectorAll('.filters-sidebar input[type="checkbox"]').forEach(cb => cb.checked = false);
+    });
+
+    const toggleBtn = document.getElementById('toggle-cols-btn');
+    const colsList = document.getElementById('cols-list-dropdown');
+    colsList.innerHTML = '';
+    table.getColumns().forEach(column => {
+        if (!column.isFrozen() && column.getDefinition().visible !== false) { 
+            const field = column.getField(); const title = column.getDefinition().title;
+            const id = `col-toggle-${field}`;
+            const div = document.createElement('div');
+            div.innerHTML = `<input type="checkbox" id="${id}" checked><label for="${id}" style="margin-left:5px; font-weight:normal; cursor:pointer;">${title}</label>`;
+            colsList.appendChild(div);
+            div.querySelector('input').addEventListener('change', (e) => { column.toggle(e.target.checked); });
+        }
+    });
+    toggleBtn.addEventListener('click', (e) => { e.stopPropagation(); colsList.classList.toggle('show'); });
+    window.addEventListener('click', () => { if (colsList.classList.contains('show')) { colsList.classList.remove('show'); } });
+    colsList.addEventListener('click', (e) => e.stopPropagation());
+    applyAllFilters();
+}
+</script>
+</body>
+</html>
