@@ -31,8 +31,7 @@
     }
     #reportTable {
       flex: 1;
-      overflow-x: auto;
-      overflow-y: auto;
+      overflow: auto;
     }
     h4, label {
       color: #3f8384;
@@ -64,22 +63,8 @@
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbzCVZTSZPBXVZNUsJawd3xoiv4uEPaxqQUhrUN-BjPaQIGV6SW07baNRRXSfSOXxlKuNw/exec';
 
-    const numericCols = [
-      "Số lượng", "Doanh thu thuần", "Đơn giá", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", 
-      "Giá bán net", "Giá bán tiêu chuẩn", "Lãi gộp tính lương B2B", "LK tiêu chuẩn", 
-      "Điều chỉnh lương khoán KD", "Lương khoán tối thiểu", "Lương khoán/kg", 
-      "LK Đức HM", "Lương khoán sales"
-    ];
-
-    const percentageCols = [
-      "% Lãi gộp tiêu chuẩn", "% Điều chỉnh trên giá", "% Điều chỉnh dưới giá", "% lương Khoán"
-    ];
-
-    const subtotalCols = [
-      "Số lượng", "Doanh thu thuần", "COGS", "Lãi gộp", 
-      "Chi phí giao hàng", "Lãi vay", "Lãi gộp tính lương B2B", 
-      "LK Đức HM", "Lương khoán sales"
-    ];
+    const numericCols = ["Số lượng", "Doanh thu thuần", "Đơn giá", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Giá bán net", "% Lãi gộp tiêu chuẩn", "Giá bán tiêu chuẩn", "Lãi gộp tính lương B2B", "LK tiêu chuẩn", "% Điều chỉnh trên giá", "% Điều chỉnh dưới giá", "Điều chỉnh lương khoán KD", "Lương khoán tối thiểu", "Lương khoán/kg", "LK Đức HM", "Lương khoán sales", "% lương Khoán"];
+    const subtotalCols = ["Số lượng", "Doanh thu thuần", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Lãi gộp tính lương B2B", "LK Đức HM", "Lương khoán sales"];
 
     function fetchData(email, token) {
       const url = `${API_URL}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
@@ -98,85 +83,55 @@
         return;
       }
 
-      const columns = Object.keys(data[0]).map(key => {
-        let columnDef = {
-          title: key,
-          field: key,
-          headerFilter: false,
-          resizable: true,
-          width: key.length * 14 + 50,
-          hozAlign: "left"
-        };
-
-        if (numericCols.includes(key)) {
-          columnDef.cssClass = 'numeric';
-          columnDef.hozAlign = 'right';
-          columnDef.formatter = "money";
-          columnDef.formatterParams = {
-            decimal: "",
-            thousand: ",",
-            precision: 0
-          };
-          if (subtotalCols.includes(key)) {
-            columnDef.bottomCalc = "sum";
-            columnDef.bottomCalcFormatter = "money";
-            columnDef.bottomCalcFormatterParams = {
-              decimal: "",
-              thousand: ",",
-              precision: 0
-            };
-          }
-        }
-
-        if (percentageCols.includes(key)) {
-          columnDef.cssClass = 'numeric';
-          columnDef.hozAlign = 'right';
-          columnDef.formatter = cell => {
-            let val = Number(cell.getValue());
-            return isNaN(val) ? "" : (val * 100).toFixed(2) + "%";
-          };
-        }
-
-        // 👇 Format cho cột ngày
-        if (key === "Ngày giao dịch") {
-          columnDef.formatter = function(cell) {
-            const rawDate = cell.getValue();
-            if (!rawDate) return "";
-      
-            let date;
-            if (typeof rawDate === "string" || rawDate instanceof String) {
-              date = new Date(rawDate);
-            } else if (rawDate instanceof Date) {
-              date = rawDate;
-            } else {
-              return rawDate;
-            }
-      
-            const localDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+      // 🔄 Định dạng ngày giao dịch
+      data.forEach(row => {
+        if (row["Ngày giao dịch"]) {
+          const date = new Date(row["Ngày giao dịch"]);
+          if (!isNaN(date)) {
+            const localDate = new Date(date.getTime() + 7 * 60 * 60 * 1000); // UTC+7
             const day = String(localDate.getDate()).padStart(2, '0');
             const month = String(localDate.getMonth() + 1).padStart(2, '0');
             const year = localDate.getFullYear();
-            return `${day}/${month}/${year}`;
-          };
+            row["Ngày giao dịch"] = `${day}/${month}/${year}`;
+          }
         }
-        return columnDef;
+      });
+
+      const columns = Object.keys(data[0]).map(key => {
+        let col = {
+          title: key,
+          field: key,
+          headerFilter: false,
+          cssClass: numericCols.includes(key) ? 'numeric' : '',
+          bottomCalc: subtotalCols.includes(key) ? 'sum' : undefined,
+          hozAlign: numericCols.includes(key) ? 'right' : 'left',
+          width: key.length * 14 + 50, // tự co giãn theo độ dài tiêu đề
+          resizable: true
+        };
+        return col;
       });
 
       new Tabulator("#reportTable", {
         data: data,
         columns: columns,
-        layout: "fitDataTable",
-        height: "100%",
-        responsiveLayout: false,
+        layout: "fitDataFill",
+        responsiveLayout: true,
         movableColumns: true,
+        resizableColumns: true,
+        height: "100%",
         virtualDom: true,
-        resizableRows: false
+        autoResize: true,
+        placeholder: "Không có dữ liệu",
+        columnDefaults: {
+          resizable: true
+        },
+        renderHorizontal: "virtual", // scroll ngang
       });
     }
 
-    window.onload = function() {
+    window.onload = function () {
       const email = prompt("Nhập email:");
-      const token = prompt("Nhập mật khẩu/token:");
+      const token = prompt("Nhập mật khẩu:");
       fetchData(email, token);
 
       new Litepicker({
@@ -184,7 +139,7 @@
         singleMode: false,
         format: "DD/MM/YYYY",
       });
-    }
+    };
   </script>
 </body>
 </html>
