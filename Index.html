@@ -12,12 +12,10 @@
       margin: 0;
       overflow: hidden;
     }
-
     #wrapper {
       display: flex;
       height: 100vh;
     }
-
     #filters {
       width: 14%;
       background: #f8f9fa;
@@ -25,29 +23,24 @@
       overflow-y: auto;
       border-right: 2px solid #3f8384;
     }
-
     #reportArea {
       width: 86%;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
     }
-
     #reportTable {
       flex: 1;
       overflow-x: auto;
       overflow-y: auto;
     }
-
     h4, label {
       color: #3f8384;
     }
-
     .tabulator .tabulator-header .tabulator-col {
       background-color: #3f8384;
       color: white;
     }
-
     .tabulator .tabulator-row .tabulator-cell.numeric {
       text-align: right;
     }
@@ -71,8 +64,17 @@
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbzCVZTSZPBXVZNUsJawd3xoiv4uEPaxqQUhrUN-BjPaQIGV6SW07baNRRXSfSOXxlKuNw/exec';
 
-    const numericCols = ["Số lượng", "Doanh thu thuần", "Đơn giá", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Giá bán net", "% Lãi gộp tiêu chuẩn", "Giá bán tiêu chuẩn", "Lãi gộp tính lương B2B", "LK tiêu chuẩn", "% Điều chỉnh trên giá", "% Điều chỉnh dưới giá", "Điều chỉnh lương khoán KD", "Lương khoán tối thiểu", "Lương khoán/kg", "LK Đức HM", "Lương khoán sales", "% lương Khoán"];
-    const subtotalCols = ["Số lượng", "Doanh thu thuần", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Lãi gộp tính lương B2B", "LK Đức HM", "Lương khoán sales"];
+    const numericCols = [
+      "Số lượng", "Doanh thu thuần", "Đơn giá", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", 
+      "Giá bán net", "% Lãi gộp tiêu chuẩn", "Giá bán tiêu chuẩn", "Lãi gộp tính lương B2B", 
+      "LK tiêu chuẩn", "% Điều chỉnh trên giá", "% Điều chỉnh dưới giá", "Điều chỉnh lương khoán KD", 
+      "Lương khoán tối thiểu", "Lương khoán/kg", "LK Đức HM", "Lương khoán sales", "% lương Khoán"
+    ];
+    const subtotalCols = [
+      "Số lượng", "Doanh thu thuần", "COGS", "Lãi gộp", 
+      "Chi phí giao hàng", "Lãi vay", "Lãi gộp tính lương B2B", 
+      "LK Đức HM", "Lương khoán sales"
+    ];
 
     function fetchData(email, token) {
       const url = `${API_URL}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
@@ -97,20 +99,20 @@
         headerFilter: false,
         cssClass: numericCols.includes(key) ? 'numeric' : '',
         bottomCalc: subtotalCols.includes(key) ? 'sum' : undefined,
-        width: 180, // Mỗi cột rộng 180px
-        sorter: numericCols.includes(key) ? 'number' : 'string',
+        hozAlign: numericCols.includes(key) ? 'right' : 'left',
+        width: key.length * 12 + 40, // Tự co giãn theo độ dài tiêu đề
         resizable: true
       }));
 
-      const table = new Tabulator("#reportTable", {
+      new Tabulator("#reportTable", {
         data: data,
         columns: columns,
-        layout: "fitDataTable", // không co chiều ngang, giữ nguyên độ rộng cột
-        responsiveLayout: false,
+        layout: "fitDataTable",        // Không ép fit theo container
         height: "100%",
+        responsiveLayout: false,
         movableColumns: true,
         virtualDom: true,
-        resizableRows: false,
+        resizableRows: false
       });
     }
 
