@@ -142,14 +142,23 @@
           columnDef.formatter = function(cell) {
             const rawDate = cell.getValue();
             if (!rawDate) return "";
-            const date = new Date(rawDate);
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
+      
+            let date;
+            if (typeof rawDate === "string" || rawDate instanceof String) {
+              date = new Date(rawDate);
+            } else if (rawDate instanceof Date) {
+              date = rawDate;
+            } else {
+              return rawDate;
+            }
+      
+            const localDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+            const day = String(localDate.getDate()).padStart(2, '0');
+            const month = String(localDate.getMonth() + 1).padStart(2, '0');
+            const year = localDate.getFullYear();
             return `${day}/${month}/${year}`;
           };
         }
-
         return columnDef;
       });
 
