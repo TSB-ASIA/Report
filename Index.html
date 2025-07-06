@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Báo Cáo Bán Hàng</title>
-  <link href="https://unpkg.com/tabulator-tables@5.4.4/dist/css/tabulator.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://unpkg.com/tabulator-tables@5.4.4/dist/css/tabulator.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" rel="stylesheet" />
   <style>
     body {
@@ -57,6 +57,7 @@
     </div>
   </div>
 
+  <!-- Thư viện -->
   <script src="https://unpkg.com/tabulator-tables@5.4.4/dist/js/tabulator.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
 
@@ -66,28 +67,23 @@
     const numericCols = ["Số lượng", "Doanh thu thuần", "Đơn giá", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Giá bán net", "% Lãi gộp tiêu chuẩn", "Giá bán tiêu chuẩn", "Lãi gộp tính lương B2B", "LK tiêu chuẩn", "% Điều chỉnh trên giá", "% Điều chỉnh dưới giá", "Điều chỉnh lương khoán KD", "Lương khoán tối thiểu", "Lương khoán/kg", "LK Đức HM", "Lương khoán sales", "% lương Khoán"];
     const subtotalCols = ["Số lượng", "Doanh thu thuần", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Lãi gộp tính lương B2B", "LK Đức HM", "Lương khoán sales"];
 
-    function formatDateToDDMMYYYY(dateStr) {
-      const date = new Date(dateStr);
-      if (isNaN(date)) return dateStr;
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    }
-
     function fetchData(email, token) {
       const url = `${API_URL}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
       fetch(url)
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) throw new Error("Lỗi kết nối server.");
+          return response.json();
+        })
         .then(data => {
-          if (data.error) {
-            document.getElementById("reportTable").innerText = "Lỗi xác thực: " + data.error;
-          } else {
-            renderData(data);
+          if (!Array.isArray(data)) {
+            console.error("Phản hồi không phải là mảng:", data);
+            document.getElementById("reportTable").innerText = data.error || "Lỗi dữ liệu không hợp lệ.";
+            return;
           }
+          renderData(data);
         })
         .catch(error => {
-          console.error("Lỗi khi lấy dữ liệu:", error);
+          console.error("Lỗi khi fetch dữ liệu:", error);
           document.getElementById("reportTable").innerText = "Lỗi tải dữ liệu.";
         });
     }
@@ -98,48 +94,38 @@
         return;
       }
 
-      // Format ngày
-      data.forEach(row => {
-        if (row["Ngày giao dịch"]) {
-          row["Ngày giao dịch"] = formatDateToDDMMYYYY(row["Ngày giao dịch"]);
-        }
-      });
-
       const columns = Object.keys(data[0]).map(key => ({
         title: key,
         field: key,
         headerFilter: false,
         cssClass: numericCols.includes(key) ? 'numeric' : '',
         bottomCalc: subtotalCols.includes(key) ? 'sum' : undefined,
-        width: key.length * 12 + 50,
-        frozen: key === Object.keys(data[0])[0],
+        minWidth: 120,
         sorter: numericCols.includes(key) ? 'number' : 'string',
-        visible: true,
         resizable: true,
       }));
 
-      const table = new Tabulator("#reportTable", {
+      new Tabulator("#reportTable", {
         data: data,
         columns: columns,
-        layout: "fitDataFill",
+        layout: "fitColumns",
         movableColumns: true,
         height: "100%",
         responsiveLayout: true,
-        resizableRows: false,
         columnDefaults: {
-          resizable: true
+          resizable: true,
         },
         pagination: false,
         virtualDom: true,
+        resizableRows: false,
         autoColumns: false,
-        renderHorizontal: "virtual",
-        renderVertical: "virtual"
+        placeholder: "Không có dữ liệu.",
       });
     }
 
     window.onload = function () {
       const email = prompt("Nhập email:");
-      const token = prompt("Nhập mật khẩu/token:");
+      const token = prompt("Nhập mật khẩu:");
       fetchData(email, token);
 
       new Litepicker({
