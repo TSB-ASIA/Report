@@ -61,13 +61,19 @@ const subtotalCols = ["Số lượng", "Doanh thu thuần", "COGS", "Lãi gộp"
 function showLoading(show = true) {
   document.getElementById("loading").style.display = show ? "flex" : "none";
 }
-
+let currentEmail = "", currentToken = "";
 function myCallback(data) {
   showLoading(false);
   if (!data || data.length === 0) {
-    alert("Không có dữ liệu hoặc sai thông tin đăng nhập.");
+    alert("Sai email hoặc token. Vui lòng nhập lại.");
+    localStorage.removeItem("report_email");
+    localStorage.removeItem("report_token");
+    location.reload(); // reload lại trang để nhập lại
     return;
   }
+  // Lưu vào localStorage chỉ khi dữ liệu hợp lệ
+  localStorage.setItem("report_email", currentEmail);
+  localStorage.setItem("report_token", currentToken);
   originalData = data.map(row => {
     if (row["Ngày giao dịch"]?.includes("T")) {
       const d = new Date(row["Ngày giao dịch"]);
@@ -113,12 +119,12 @@ function myCallback(data) {
 
 function fetchDataJSONP(email, token) {
   showLoading(true);
-  localStorage.setItem("report_email", email);
-  localStorage.setItem("report_token", token);
+  currentEmail = email;
+  currentToken = token;
   const script = document.createElement('script');
   script.src = `${API_URL}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}&callback=myCallback`;
   document.body.appendChild(script);
-}
+{
 
 function buildFilters(data) {
   ['Salesman', 'Sản phẩm', 'Vùng miền', 'Quý', 'Năm'].forEach(field => {
