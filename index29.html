@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Báo Cáo Bán Hàng</title>
+  <link href="https://unpkg.com/tabulator-tables@5.4.4/dist/css/tabulator.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" rel="stylesheet" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; overflow: hidden; }
+    #wrapper { display: flex; height: 100vh; }
+    #filters {
+      width: 18%; background: #f8f9fa; padding: 1rem; overflow-y: auto;
+      border-right: 2px solid #3f8384;
+    }
+    #reportArea { width: 82%; overflow: hidden; display: flex; flex-direction: column; }
+    #reportTable { flex: 1; overflow-x: auto; white-space: nowrap; }
+    h4, label { color: #3f8384; }
+    .tabulator .tabulator-header .tabulator-col {
+      background-color: #3f8384; color: white; text-align: center;
+    }
+    .tabulator .tabulator-row .tabulator-cell.numeric { text-align: right; }
+    .filter-group { margin-bottom: 12px; }
+    .filter-group label { font-weight: bold; }
+    .checkbox-group {
+      border: 1px solid #ccc; padding: 5px; max-height: 120px;
+      overflow-y: auto; background: #fff;
+    }
+    #columnToggles { position: absolute; top: 50px; right: 160px; background: #fff; border: 1px solid #ccc; padding: 10px; z-index: 10; display: none; max-height: 400px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+<div id="wrapper">
+  <div id="filters">
+    <h4>Bộ Lọc</h4>
+    <label>Ngày giao dịch</label>
+    <input id="dateRange" class="form-control mb-2" />
+
+    <label>Khách hàng</label>
+    <input id="customerFilter" class="form-control mb-2" placeholder="Tên khách hàng" />
+
+    <div class="filter-group">
+      <label>Salesman</label>
+      <div><button onclick="toggleAll('salesmanFilter', true)">Chọn tất cả</button> <button onclick="toggleAll('salesmanFilter', false)">Bỏ chọn</button></div>
+      <div id="salesmanFilter" class="checkbox-group"></div>
+    </div>
+
+    <div class="filter-group">
+      <label>Sản phẩm</label>
+      <div><button onclick="toggleAll('productFilter', true)">Chọn tất cả</button> <button onclick="toggleAll('productFilter', false)">Bỏ chọn</button></div>
+      <div id="productFilter" class="checkbox-group"></div>
+    </div>
+
+    <div class="filter-group">
+      <label>Vùng miền</label>
+      <div><button onclick="toggleAll('regionFilter', true)">Chọn tất cả</button> <button onclick="toggleAll('regionFilter', false)">Bỏ chọn</button></div>
+      <div id="regionFilter" class="checkbox-group"></div>
+    </div>
+
+    <div class="filter-group">
+      <label>Quý</label>
+      <div><button onclick="toggleAll('quarterFilter', true)">Chọn tất cả</button> <button onclick="toggleAll('quarterFilter', false)">Bỏ chọn</button></div>
+      <div id="quarterFilter" class="checkbox-group"></div>
+    </div>
+
+    <div class="filter-group">
+      <label>Năm</label>
+      <div><button onclick="toggleAll('yearFilter', true)">Chọn tất cả</button> <button onclick="toggleAll('yearFilter', false)">Bỏ chọn</button></div>
+      <div id="yearFilter" class="checkbox-group"></div>
+    </div>
+
+    <button id="applyFilter" class="btn btn-primary mt-3">Lọc dữ liệu</button>
+  </div>
+
+  <div id="reportArea">
+    <h2 style="text-align:center; color:#3f8384; margin:10px 0;">CHI TIẾT HIỆU QUẢ BÁN HÀNG</h2>
+    <div class="d-flex justify-content-end px-3 mb-2">
+      <button id="btn-toggle-cols" class="btn btn-outline-primary btn-sm me-2">Ẩn/Hiện Cột</button>
+      <button id="btn-export" class="btn btn-success btn-sm">Xuất Excel</button>
+    </div>
+    <div id="columnToggles"></div>
+    <div id="reportTable"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/tabulator-tables@5.4.4/dist/js/tabulator.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbzyp38Q_CMRhhOFnZJep73kMxvRwbFpzZhwSqFcGrxSn0ulAyv35hqc370rQxWIbh49/exec';
+let table, originalData = [], currentEmail = '', currentToken = '';
+const defaultVisibleColumns = [
+  "Số chứng từ", "Loại giao dịch", "Sản phẩm", "Khách hàng", "Mã lô hàng", "mã Hàng", "Tên hàng",
+  "Số lượng", "Doanh thu thuần", "COGS", "Lãi Gộp", "Chi phí giao hàng", "Lãi vay"
+];
+
+function myCallback(data) {
+  if (!Array.isArray(data)) return alert("Sai dữ liệu hoặc token/email không đúng");
+  originalData = data.map(row => {
+    if (row["Ngày giao dịch"]?.includes("T")) {
+      const d = new Date(row["Ngày giao dịch"]);
+      row["Ngày giao dịch"] = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    }
+    return row;
+  });
+  buildFilters(originalData);
+  createTable(originalData);
+  buildColumnToggles();
+}
+
+function createTable(data) {
+  const allKeys = Object.keys(data[0]);
+  const orderedKeys = [...defaultVisibleColumns, ...allKeys.filter(k => !defaultVisibleColumns.includes(k))];
+  const columns = orderedKeys.map(key => ({
+    title: key, field: key, visible: defaultVisibleColumns.includes(key),
+    hozAlign: typeof data[0][key] === 'number' ? 'right' : 'left',
+    cssClass: typeof data[0][key] === 'number' ? 'numeric' : ''
+  }));
+  table = new Tabulator("#reportTable", {
+    data,
+    columns,
+    layout: false,
+    height: "100%",
+    movableColumns: true,
+    resizableColumns: true,
+    autoResize: true,
+    responsiveLayout: true,
+    placeholder: "Không có dữ liệu"
+  });
+}
+
+function buildColumnToggles() {
+  const container = document.getElementById("columnToggles");
+  container.innerHTML = table.getColumns().map(col => {
+    const field = col.getField();
+    return `<div><label><input type="checkbox" value="${field}" ${col.isVisible() ? 'checked' : ''}> ${field}</label></div>`;
+  }).join('');
+  container.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const col = table.getColumn(cb.value);
+      if (col) col.toggle();
+    });
+  });
+}
+
+function fetchDataJSONP(email, token) {
+  currentEmail = email;
+  currentToken = token;
+  const script = document.createElement('script');
+  script.src = `${API_URL}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}&callback=myCallback`;
+  document.body.appendChild(script);
+}
+
+function populateCheckboxFilters(data, field, containerId) {
+  const uniqueValues = [...new Set(data.map(row => row[field]).filter(Boolean))];
+  document.getElementById(containerId).innerHTML = uniqueValues.map(v => `<div><label><input type="checkbox" value="${v}" checked /> ${v}</label></div>`).join('');
+}
+
+function buildFilters(data) {
+  populateCheckboxFilters(data, 'Salesman', 'salesmanFilter');
+  populateCheckboxFilters(data, 'Sản phẩm', 'productFilter');
+  populateCheckboxFilters(data, 'Vùng miền', 'regionFilter');
+  populateCheckboxFilters(data, 'Quý', 'quarterFilter');
+  populateCheckboxFilters(data, 'Năm', 'yearFilter');
+}
+
+function toggleAll(containerId, checked) {
+  document.querySelectorAll(`#${containerId} input[type='checkbox']`).forEach(cb => cb.checked = checked);
+}
+
+function getCheckedValues(containerId) {
+  const checked = Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(cb => cb.value);
+  const all = Array.from(document.querySelectorAll(`#${containerId} input`)).map(cb => cb.value);
+  return checked.length > 0 ? checked : all;
+}
+
+function isDateInRange(dateStr, range) {
+  if (!range[0] || !range[1]) return true;
+  const [start, end] = range;
+  const d = new Date(dateStr.split("/").reverse().join("-"));
+  const ds = new Date(start.split("/").reverse().join("-"));
+  const de = new Date(end.split("/").reverse().join("-"));
+  return d >= ds && d <= de;
+}
+
+function applyFilters() {
+  const customer = document.getElementById('customerFilter').value.toLowerCase();
+  const dateRange = document.getElementById('dateRange').value.split(' - ');
+  const salesman = getCheckedValues('salesmanFilter');
+  const product = getCheckedValues('productFilter');
+  const region = getCheckedValues('regionFilter');
+  const quarter = getCheckedValues('quarterFilter');
+  const year = getCheckedValues('yearFilter');
+
+  const filtered = originalData.filter(row => {
+    return (!customer || (row['Khách hàng'] || '').toLowerCase().includes(customer)) &&
+           isDateInRange(row['Ngày giao dịch'], dateRange) &&
+           salesman.includes(row['Salesman']) &&
+           product.includes(row['Sản phẩm']) &&
+           region.includes(row['Vùng miền']) &&
+           quarter.includes(row['Quý']) &&
+           year.includes(row['Năm']);
+  });
+
+  table.setData(filtered);
+}
+
+document.getElementById('applyFilter').addEventListener('click', applyFilters);
+document.getElementById('btn-toggle-cols').addEventListener('click', () => {
+  const el = document.getElementById('columnToggles');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('btn-export').addEventListener('click', () => table.download("xlsx", "bao_cao_ban_hang.xlsx"));
+
+window.onload = () => {
+  const email = prompt("Nhập email:");
+  const token = prompt("Nhập mật khẩu:");
+  fetchDataJSONP(email, token);
+  new Litepicker({ element: document.getElementById("dateRange"), singleMode: false, format: "DD/MM/YYYY" });
+};
+</script>
+</body>
+</html>
