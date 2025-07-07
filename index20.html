@@ -64,77 +64,131 @@
   <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
 
   <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzyp38Q_CMRhhOFnZJep73kMxvRwbFpzZhwSqFcGrxSn0ulAyv35hqc370rQxWIbh49/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzyp38Q_CMRhhOFnZJep73kMxvRwbFpzZhwSqFcGrxSn0ulAyv35hqc370rQxWIbh49/exec';
 
-    const numericCols = ["Số lượng", "Doanh thu thuần", "Đơn giá", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Giá bán net", "% Lãi gộp tiêu chuẩn", "Giá bán tiêu chuẩn", "Lãi gộp tính lương B2B", "LK tiêu chuẩn", "% Điều chỉnh trên giá", "% Điều chỉnh dưới giá", "Điều chỉnh lương khoán KD", "Lương khoán tối thiểu", "Lương khoán/kg", "LK Đức HM", "Lương khoán sales", "% lương Khoán"];
-    const subtotalCols = ["Số lượng", "Doanh thu thuần", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Lãi gộp tính lương B2B", "LK Đức HM", "Lương khoán sales"];
+  const numberCols = [
+    "Số lượng", "Doanh thu thuần", "Đơn giá", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Giá bán net", "Giá bán tiêu chuẩn",
+    "Lãi gộp tính lương B2B", "LK tiêu chuẩn", "Điều chỉnh lương khoán KD", "Lương khoán tối thiểu", "Lương khoán/kg",
+    "LK Đức HM", "Lương khoán sales"
+  ];
 
-    function myCallback(data) {
-      if (data.error) {
-        document.getElementById("reportTable").innerText = `❌ ${data.error}`;
-        return;
-      }
+  const percentCols = [
+    "% Lãi gộp tiêu chuẩn", "% Điều chỉnh trên giá", "% Điều chỉnh dưới giá", "% lương Khoán"
+  ];
 
-      data.forEach(row => {
-        if (row["Ngày giao dịch"] && typeof row["Ngày giao dịch"] === "string" && row["Ngày giao dịch"].includes("T")) {
-          const date = new Date(row["Ngày giao dịch"]);
-          if (!isNaN(date)) {
-            const d = new Date(date.getTime() + 7 * 60 * 60 * 1000); // UTC+7
-            const dd = String(d.getDate()).padStart(2, '0');
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const yyyy = d.getFullYear();
-            row["Ngày giao dịch"] = `${dd}/${mm}/${yyyy}`;
-          }
+  const subtotalCols = [
+    "Số lượng", "Doanh thu thuần", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay",
+    "Lãi gộp tính lương B2B", "LK Đức HM", "Lương khoán sales"
+  ];
+
+  function formatNumber(v) {
+    return v !== null && v !== undefined ? v.toLocaleString('vi-VN', { maximumFractionDigits: 0 }) : "";
+  }
+
+  function formatPercent(v) {
+    return v !== null && v !== undefined ? (v * 100).toFixed(2) + "%" : "";
+  }
+
+  function myCallback(data) {
+    if (data.error) {
+      document.getElementById("reportTable").innerText = `❌ ${data.error}`;
+      return;
+    }
+
+    data.forEach(row => {
+      if (row["Ngày giao dịch"] && typeof row["Ngày giao dịch"] === "string" && row["Ngày giao dịch"].includes("T")) {
+        const date = new Date(row["Ngày giao dịch"]);
+        if (!isNaN(date)) {
+          const d = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+          const dd = String(d.getDate()).padStart(2, '0');
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const yyyy = d.getFullYear();
+          row["Ngày giao dịch"] = `${dd}/${mm}/${yyyy}`;
         }
-      });
+      }
+    });
 
-      const columns = Object.keys(data[0]).map(key => ({
+    const columns = Object.keys(data[0]).map(key => {
+      const col = {
         title: key,
         field: key,
         headerFilter: false,
-        cssClass: numericCols.includes(key) ? 'numeric' : '',
-        bottomCalc: subtotalCols.includes(key) ? 'sum' : undefined,
-        hozAlign: numericCols.includes(key) ? 'right' : 'left',
+        cssClass: numberCols.includes(key) || percentCols.includes(key) ? 'numeric' : '',
+        hozAlign: numberCols.includes(key) || percentCols.includes(key) ? 'right' : 'left',
+        resizable: true,
         width: key.length * 14 + 50,
-        resizable: true
-      }));
+      };
 
-      new Tabulator("#reportTable", {
-        data: data,
-        columns: columns,
-        layout: "fitColumns",        // ✅ Thay vì fitDataFill
-        responsiveLayout: false,     // ✅ Tắt responsive để tránh xung đột
-        movableColumns: true,
-        resizableColumns: true,
-        height: "100%",
-        virtualDom: true,
-        autoResize: true,
-        placeholder: "Không có dữ liệu",
-        columnDefaults: {
-          resizable: true
+      if (numberCols.includes(key)) {
+        col.formatter = cell => formatNumber(cell.getValue());
+        if (subtotalCols.includes(key)) col.bottomCalc = "sum";
+        col.bottomCalcFormatter = cell => formatNumber(cell.getValue());
+      }
+
+      if (percentCols.includes(key)) {
+        col.formatter = cell => formatPercent(cell.getValue());
+        if (key !== "% lương Khoán") {
+          col.bottomCalc = "avg";
+          col.bottomCalcFormatter = cell => formatPercent(cell.getValue());
+        } else {
+          // Cột "% lương Khoán" tính riêng
+          col.bottomCalc = function (values, data) {
+            const totalLuongKhoanSales = data.reduce((sum, row) => sum + (parseFloat(row["Lương khoán sales"]) || 0), 0);
+            const totalDoanhThuThuan = data.reduce((sum, row) => sum + (parseFloat(row["Doanh thu thuần"]) || 0), 0);
+            return totalDoanhThuThuan !== 0 ? totalLuongKhoanSales / totalDoanhThuThuan : 0;
+          };
+          col.bottomCalcFormatter = cell => formatPercent(cell.getValue());
         }
-        // ❌ Không dùng renderHorizontal: "virtual"
-      });
-    }
+      }
 
-    function fetchDataJSONP(email, token) {
-      const script = document.createElement('script');
-      const url = `${API_URL}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}&callback=myCallback`;
-      script.src = url;
-      document.body.appendChild(script);
-    }
+      // Cột "Giá bán net" subtotal = Doanh thu thuần / Số lượng
+      if (key === "Giá bán net") {
+        col.bottomCalc = function (values, data) {
+          const totalDoanhThuThuan = data.reduce((sum, row) => sum + (parseFloat(row["Doanh thu thuần"]) || 0), 0);
+          const totalSoLuong = data.reduce((sum, row) => sum + (parseFloat(row["Số lượng"]) || 0), 0);
+          return totalSoLuong !== 0 ? totalDoanhThuThuan / totalSoLuong : 0;
+        };
+        col.bottomCalcFormatter = cell => formatNumber(cell.getValue());
+      }
 
-    window.onload = function () {
-      const email = prompt("Nhập email:");
-      const token = prompt("Nhập mật khẩu:");
-      fetchDataJSONP(email, token);
+      return col;
+    });
 
-      new Litepicker({
-        element: document.getElementById("dateRange"),
-        singleMode: false,
-        format: "DD/MM/YYYY",
-      });
-    };
-  </script>
+    new Tabulator("#reportTable", {
+      data: data,
+      columns: columns,
+      layout: "fitColumns",
+      responsiveLayout: false,
+      movableColumns: true,
+      resizableColumns: true,
+      height: "100%",
+      virtualDom: true,
+      autoResize: true,
+      placeholder: "Không có dữ liệu",
+      columnDefaults: {
+        resizable: true
+      }
+    });
+  }
+
+  function fetchDataJSONP(email, token) {
+    const script = document.createElement('script');
+    const url = `${API_URL}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}&callback=myCallback`;
+    script.src = url;
+    document.body.appendChild(script);
+  }
+
+  window.onload = function () {
+    const email = prompt("Nhập email:");
+    const token = prompt("Nhập mật khẩu:");
+    fetchDataJSONP(email, token);
+
+    new Litepicker({
+      element: document.getElementById("dateRange"),
+      singleMode: false,
+      format: "DD/MM/YYYY",
+    });
+  };
+</script>
 </body>
 </html>
