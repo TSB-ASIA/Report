@@ -186,6 +186,10 @@
     document.body.appendChild(script);
   }
 
+  function formatNumber(value) {
+    return typeof value === "number" ? value.toLocaleString("vi-VN") : value;
+  }
+
   function myCallback(data) {
     if (data.error) {
       document.getElementById("reportTable").innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
@@ -209,17 +213,35 @@
     const percentCols = ["% Lãi gộp tiêu chuẩn", "% Điều chỉnh trên giá", "% Điều chỉnh dưới giá", "% lương Khoán"];
     const subtotalCols = ["Số lượng", "Doanh thu thuần", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Lãi gộp tính lương B2B", "LK Đức HM", "Lương khoán sales"];
 
-    const columns = Object.keys(data[0]).map(key => ({
-      title: key,
-      field: key,
-      cssClass: numericCols.includes(key) ? 'numeric' : '',
-      bottomCalc: subtotalCols.includes(key) ? 'sum' : undefined,
-      hozAlign: numericCols.includes(key) || percentCols.includes(key) ? 'right' : 'left',
-      formatter: percentCols.includes(key)
-        ? cell => `${(cell.getValue() * 100).toFixed(2)}%`
-        : undefined,
-      width: key.length * 14 + 50,
-    }));
+    const columns = Object.keys(data[0]).map(key => {
+      const col = {
+        title: key,
+        field: key,
+        cssClass: numericCols.includes(key) ? 'numeric' : '',
+        hozAlign: numericCols.includes(key) || percentCols.includes(key) ? 'right' : 'left',
+        width: key.length * 14 + 50,
+      };
+
+      if (percentCols.includes(key)) {
+        col.formatter = cell => `${(cell.getValue() * 100).toFixed(2)}%`;
+      } else if (numericCols.includes(key)) {
+        col.formatter = cell => formatNumber(cell.getValue());
+      }
+
+      if (subtotalCols.includes(key)) {
+        col.bottomCalc = 'sum';
+      }
+
+      if (key === "Giá bán net") {
+        col.bottomCalc = (values, data) => {
+          const totalRevenue = data.reduce((acc, row) => acc + (parseFloat(row["Doanh thu thuần"]) || 0), 0);
+          const totalQty = data.reduce((acc, row) => acc + (parseFloat(row["Số lượng"]) || 0), 0);
+          return totalQty !== 0 ? formatNumber(Math.round(totalRevenue / totalQty)) : 0;
+        };
+      }
+
+      return col;
+    });
 
     table = new Tabulator("#reportTable", {
       data: data,
@@ -237,9 +259,7 @@
     };
 
     document.getElementById("btn-toggle-cols").onclick = () => {
-      table.getColumns().forEach(col => {
-        col.toggle();
-      });
+      table.showColumnSelector();
     };
   }
 
