@@ -125,7 +125,7 @@ function myCallback(data) {
   allColumnDefinitions = Object.keys(originalData[0]).map(key => ({
     title: key, field: key, hozAlign: numericCols.includes(key) || percentCols.includes(key) ? 'right' : 'left', cssClass: numericCols.includes(key) ? 'numeric' : '',
     formatter: numericCols.includes(key) ? cell => cell.getValue() != null ? Number(cell.getValue()).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '' :
-               percentCols.includes(key) ? cell => cell.getValue() != null ? `${Number(cell.getValue()).toFixed(2)}%` : '' : undefined,
+               percentCols.includes(key) ? cell => cell.getValue() != null ? `${(Number(cell.getValue())*100).toFixed(2)}%` : '' : undefined,
     bottomCalc: 
         key === 'Khách hàng' ? "unique" :
         key === 'Số đơn hàng' ? "unique" :
