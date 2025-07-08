@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Báo Cáo Bán Hàng</title>
+  <link href"` trong `bottomCalcFormatterParams`, chúng ta có thể ghi đè lên định dạng mặc định và căn giữa các giá trị subtotal một cách chính xác.
+
+Dưới đây là phiên bản code đầy đủ đã được cập nhật. Bạn chỉ cần thay thế toàn bộ file cũ.
+
+---
+
+### **Code Hoàn Chỉnh (Đã Sửa Định Dạng)**
+
+```html
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Báo Cáo Bán Hàng</title>
+  <="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepickerlink href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/.css" rel="stylesheet" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; }
+    #wrapper { display: flex; height: 100vh; }
+    #filters { width: 18%; padding: 1rem; background: #f8f9fa; overflow-y: auto; border-right: 2px solid #3f83litepicker.css" rel="stylesheet" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; }
+    #wrapper { display: flex; height: 100vh; }
+    #filters { width: 18%; padding: 1rem; background: #f8f9fa; overflow-y: auto; border-right: 2px solid #3f8384; flex-shrink: 0; }
+    #reportArea { 
+        width:84; flex-shrink: 0; }
+    #reportArea { 
+        width: 82%; 
+        display: flex; 
+        flex-direction: column; 
+        overflow: hidden; 
+        position: relative;
+    }
+    #reportTable { flex: 1; overflow: auto; }
+    h4, label { color: #3f8384; font-weight: bold; }
+    .tabulator .tabulator-header .tabulator-col { background: #3f 82%; 
+        display: flex; 
+        flex-direction: column; 
+        overflow: hidden; 
+        position: relative;
+    }
+    #reportTable { flex: 1; overflow: auto; }
+    h4, label { color: #3f8384; font-weight: bold; }
+    .tabulator .tabulator-header .tabulator-col { background: #8384; color: white; text-align: center; }
+    .tabulator .tabulator-header .tabulator-col.tabulator-col-movable { cursor: move; }
+    .tabulator .tabulator-row .tabulator-cell.numeric { text-align: right; }
+    .filter-group { margin-bottom: 12px; }
+    .checkbox-group { border: 1px solid #ccc; max-height: 120px; overflow-y: auto; background: #fff3f8384; color: white; text-align: center; }
+    .tabulator .tabulator-header .tabulator-col.tabulator-col-movable { cursor: move; }
+    .tabulator .tabulator-row .tabulator-cell.numeric { text-align: right; }
+    .filter-group { margin-bottom: 12px; }
+    .checkbox-group { border: 1px solid #ccc; max-height: 120px; overflow-y: auto; padding: 5px; }
+    #loading { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; display: none; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 1; background: #fff; padding: 5px; }
+    #loading { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; display: none; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,00%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: none; justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; }
+    .modal-header { padding-bottom: 10px; border-bottom: 1px solid #ccc; margin-bottom: 15px; }
+    .modal-body { overflow-y: auto; margin-bottom:0,0,0.5); z-index: 10000; display: none; justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; }
+    .modal-header { padding-bottom: 10px; border-bottom: 1px solid #ccc; margin-bottom: 15px; }
+    .modal-body { overflow- 15px; }
+    .modal-footer { text-align: right; border-top: 1px solid #ccc; padding-top: 15px; }
+    #column-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+    .select-controls { font-size: 0.8em; font-weight: normal; margin-left: 8px; }
+    .select-controls a { text-decoration: none; color: #0d6efd; }
+    .select-controls ay: auto; margin-bottom: 15px; }
+    .modal-footer { text-align: right; border-top: 1px solid #ccc; padding-top: 15px; }
+    #column-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+    .select-controls { font-size: 0.8em; font-weight: normal; margin-left: 8px; }
+    .select-controls a { text-decoration: none; color: #0d6efd;:hover { text-decoration: underline; }
+    #company-logo {
+        position: absolute;
+        top: 10px;
+        left: 20px;
+        width: 100px;
+        height: auto;
+        opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+<div id="loading">Đang tải dữ liệu...</div>
+<div id="column-selector-modal" class="modal-overlay"> <!-- Modal HTML --> </div>
+<div id="wrapper">
+  <div id="filters"> <!-- Filters HTML --> </div>
+  <div id="reportArea">
+    <img id="company-logo" src="https://i.imgur.com/DrxQhMN.png" alt="Company Logo">
+    <h2 class="text-center text-primary mt-2">CHI TIẾT HIỆU QUẢ BÁN HÀNG</h2>
+    <div class="d-flex justify }
+    .select-controls a:hover { text-decoration: underline; }
+    #company-logo {
+        position: absolute;
+        top: 10px;
+        left: 20px;
+        width: 100px;
+        height: auto;
+        opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+<div id="loading">Đang tải dữ liệu...</div>
+<div id="column-selector-modal" class="modal-overlay"> <!-- Modal HTML --> </div>
+<div id="wrapper">
+  <div id="filters">
+    <h4>BỘ LỌC</h4>
+    <label for="dateRange">Ngày giao dịch</label>
+    <input id-content-end align-items-center px-3 mb-2">
+      <button id="btn-save-layout" class="btn btn-info btn-sm me-2">Lưu Cấu hình</button>
+      <button id="btn-reset-layout" class="btn btn-warning btn-sm me-2">Reset Cấu hình</button>
+      <button id="btn-toggle-cols" class="btn btn-outline="dateRange" class="form-control mb-2" />
+    <label for="customerFilter">Khách hàng</label>
+    <input id="customerFilter" class="form-control mb-2" placeholder="Tên khách hàng" />
+    <div class="filter-group"><label>Salesman</label><-primary btn-sm me-2">Chọn/Bỏ chọn Cột</button>
+      <button id="btn-export" class="btn btn-success btn-sm">Xuất Excel</button>
+    </div>div id="salesman-filter-container" class="checkbox-group"></div></div>
+    <div class="
+    <div id="reportTable"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.filter-group"><label>Nhóm sản Phẩm</label><div id="nhom-san-pham-com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></filter-container" class="checkbox-group"></div></div>
+    <div class="filter-group"><label>script>
+<script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.Loại xuất</label><div id="loai-xuat-filter-container" class="checkbox-groupjs"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// --- Các"></div></div>
+    <div class="filter-group"><label>Sản phẩm</label><div id="product-filter-container" class="checkbox-group"></div></div>
+    <div class="filter-group">< hằng số và biến toàn cục giữ nguyên ---
+const API_URL = 'https://script.google.comlabel>Vùng miền</label><div id="region-filter-container" class="checkbox-group"></div>/macros/s/AKfycbzyp38Q_CMRhhOFnZJep73k</div>
+    <div class="filter-group"><label>Quý</label><div id="quarter-filterMxvRwbFpzZhwSqFcGrxSn0ulAyv35hqc370rQxWIbh49/exec';
+const COLUMN_CONFIG_KEY = 'salesReportColumnConfig';-container" class="checkbox-group"></div></div>
+    <div class="filter-group"><label>N
+let table, originalData = [];
+let allColumnDefinitions = [];
+let currentEmail = "", currentToken = "";
+ăm</label><div id="year-filter-container" class="checkbox-group"></div></div>
+  </div>const numericCols = ["Số lượng", "Doanh thu thuần", "Đơn giá", "COGS", "
+  <div id="reportArea">
+    <img id="company-logo" src="https://i.imgur.com/DrxQhMN.png" alt="Company Logo">
+    <h2 classLãi gộp", "Chi phí giao hàng", "Lãi vay", "Giá bán net", "Giá bán tiêu chuẩn", "Lãi gộp tính lương B2B", "LK tiêu chuẩn", "Điều chỉnh lương khoán KD",="text-center text-primary mt-2">CHI TIẾT HIỆU QUẢ BÁN HÀ "Lương khoán tối thiểu", "Lương khoán/kg", "LK Đức HM", "LươngNG</h2>
+    <div class="d-flex justify-content-end align-items-center px-3 khoán sales"];
+const percentCols = ["% Lãi gộp tiêu chuẩn", "% Điều chỉnh trên giá", mb-2">
+      <button id="btn-save-layout" class="btn btn-info btn- "% Điều chỉnh dưới giá", "% lương Khoán"];
+const subtotalCols = ["Số lượng", "Doanhsm me-2">Lưu Cấu hình</button>
+      <button id="btn-reset-layout thu thuần", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Lãi gộp tính lương B2B", "LK Đức HM", "Lương khoán sales"];
+" class="btn btn-warning btn-sm me-2">Reset Cấu hình</button>
+      <const FILTER_CONFIG = [
+  { field: 'Salesman', containerId: 'salesman-filter-button id="btn-toggle-cols" class="btn btn-outline-primary btn-sm me-2">container' },
+  { field: 'Nhóm sản Phẩm', containerId: 'nhom-san-Chọn/Bỏ chọn Cột</button>
+      <button id="btn-export" class="btn btnpham-filter-container' },
+  { field: 'Loại xuất', containerId: 'loai--success btn-sm">Xuất Excel</button>
+    </div>
+    <div id="reportTable">xuat-filter-container' },
+  { field: 'Sản phẩm', containerId: 'product-</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/tabulator-tables@5.filter-container' },
+  { field: 'Vùng miền', containerId: 'region-filter-container5.0/dist/js/tabulator.min.js"></script>
+<script src="https://' },
+  { field: 'Quý', containerId: 'quarter-filter-container' },
+  cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
+<script src="{ field: 'Năm', containerId: 'year-filter-container' }
+];
+
+function myCallbackhttps://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full(data) {
+  showLoading(false);
+  if (!Array.isArray(data) || (Array.min.js"></script>
+<script>
+// --- Các hằng số và biến toàn cục giữ nguyên.isArray(data) && data.length > 0 && typeof data[0] !== 'object')) {
+ ---
+const API_URL = 'https://script.google.com/macros/s/AKfycbz    alert("Sai email hoặc token. Vui lòng nhập lại.");
+    localStorage.removeItem("report_email");yp38Q_CMRhhOFnZJep73kMxvRwbFpzZhwSq
+    localStorage.removeItem("report_token");
+    location.reload();
+    return;
+  }
+FcGrxSn0ulAyv35hqc370rQxWIbh49/exec  localStorage.setItem("report_email", currentEmail);
+  localStorage.setItem("report_token", currentToken);
+  originalData = data.map(row => {
+    if (row["Ngày giao dịch"] &&';
+const COLUMN_CONFIG_KEY = 'salesReportColumnConfig';
+let table, originalData = [];
+ typeof row["Ngày giao dịch"] === 'string' && row["Ngày giao dịch"].includes("T")) {
+let allColumnDefinitions = [];
+let currentEmail = "", currentToken = "";
+const numericCols = ["Số lượng",      const d = new Date(row["Ngày giao dịch"]);
+      row["Ngày giao dịch"] = `${String "Doanh thu thuần", "Đơn giá", "COGS", "Lãi gộp", "Chi phí giao hàng",(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart "Lãi vay", "Giá bán net", "Giá bán tiêu chuẩn", "Lãi gộp tính lương B(2, '0')}/${d.getFullYear()}`;
+    }
+    return row;
+  });
+  if (originalData.length === 0) {
+      document.getElementById('reportTable').innerHTML = '<2B", "LK tiêu chuẩn", "Điều chỉnh lương khoán KD", "Lương khoán tối thiểu",div class="alert alert-info text-center mt-4">Không có dữ liệu nào để hiển thị.</div> "Lương khoán/kg", "LK Đức HM", "Lương khoán sales"];
+const percentCols';
+      return;
+  }
+  buildFilters(originalData);
+
+  // ✅ CẬP NH = ["% Lãi gộp tiêu chuẩn", "% Điều chỉnh trên giá", "% Điều chỉnh dưới giá", "% lươngẬT: Định nghĩa cấu hình cột với các sửa lỗi cuối cùng
+  allColumnDefinitions = Object.keys(original Khoán"];
+const subtotalCols = ["Số lượng", "Doanh thu thuần", "COGS", "Data[0]).map(key => ({
+    title: key, 
+    field: key, 
+Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Lãi gộp tính lương B2B",    hozAlign: numericCols.includes(key) || percentCols.includes(key) ? 'right' : 'left', 
+    cssClass: numericCols.includes(key) ? 'numeric' : '',
+     "LK Đức HM", "Lương khoán sales"];
+const FILTER_CONFIG = [
+  { field: 'Salesman', containerId: 'salesman-filter-container' },
+  { field: 'Nhóm// --- SỬA LỖI ĐỊNH DẠNG PERCENTAGE ---
+    formatter: 
+        numeric sản Phẩm', containerId: 'nhom-san-pham-filter-container' },
+  { fieldCols.includes(key) ? 
+            cell => cell.getValue() != null ? Number(cell.getValue()).toLocaleString(': 'Loại xuất', containerId: 'loai-xuat-filter-container' },
+  {en-US', { maximumFractionDigits: 0 }) : '' :
+        percentCols.includes(key) field: 'Sản phẩm', containerId: 'product-filter-container' },
+  { field: ' ? 
+            // Nhân với 100 trước khi định dạng
+            cell => cell.getValue() !=Vùng miền', containerId: 'region-filter-container' },
+  { field: 'Quý', null ? `${(Number(cell.getValue()) * 100).toFixed(2)}%` : '' containerId: 'quarter-filter-container' },
+  { field: 'Năm', containerId: ' : 
+        undefined,
+    bottomCalc: 
+        key === 'Khách hàng' ? "unique" :year-filter-container' }
+];
+
+function myCallback(data) {
+  showLoading(false);
+  if
+        key === 'Số đơn hàng' ? "unique" :
+        key === '% lương Khoán' ? (!Array.isArray(data) || (Array.isArray(data) && data.length > 0 && typeof 
+            function(values, data, calcParams){
+                const totalSales = data.reduce((sum, row) => data[0] !== 'object')) {
+    alert("Sai email hoặc token. Vui lòng nhập lại."); sum + (row["Lương khoán sales"] || 0), 0);
+                const totalRevenue =
+    localStorage.removeItem("report_email");
+    localStorage.removeItem("report_token");
+    location. data.reduce((sum, row) => sum + (row["Doanh thu thuần"] || 0), reload();
+    return;
+  }
+  localStorage.setItem("report_email", currentEmail);
+  0);
+                if(totalRevenue === 0) return "0.00%";
+                const percentage = (totalSales / totalRevenue) * 100;
+                return `${percentage.toFixed(2)}%localStorage.setItem("report_token", currentToken);
+  originalData = data.map(row => {
+`;
+            } :
+        key === 'Giá bán net' ? 
+            function(values, data,    if (row["Ngày giao dịch"] && typeof row["Ngày giao dịch"] === 'string' && row[" calcParams){
+                const tongDT = data.reduce((s, r) => s + (r['DoNgày giao dịch"].includes("T")) {
+      const d = new Date(row["Ngày giao dịch"]);
+anh thu thuần'] || 0), 0);
+                const tongSL = data.reduce((s, r) => s + (r['Số lượng'] || 0), 0);
+                return tongSL ? (      row["Ngày giao dịch"] = `${String(d.getDate()).padStart(2, '0')}/${StringtongDT / tongSL).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits:(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+     0}) : 0;
+            } : 
+        subtotalCols.includes(key) ? "}
+    return row;
+  });
+  if (originalData.length === 0) {
+      document.getElementById('reportTable').innerHTML = '<div class="alert alert-info text-center mt-4">sum" : 
+        undefined,
+    bottomCalcFormatter: subtotalCols.includes(key) ? "money" : undefined, 
+    bottomCalcFormatterParams: subtotalCols.includes(key) ? { thousand: ",", precisionKhông có dữ liệu nào để hiển thị.</div>';
+      return;
+  }
+  buildFilters(originalData);
+
+  // ✅ CẬP NHẬT: Hoàn thiện logic định dạng cột
+  allColumnDefinitions: 0 } : undefined,
+    // --- SỬA LỖI CĂN LỀ SUBTOTAL ---
+    bottom = Object.keys(originalData[0]).map(key => ({
+    title: key, field: keyCalcHozAlign: (key === 'Khách hàng' || key === 'Số đơn hàng') ? "center" :, hozAlign: numericCols.includes(key) || percentCols.includes(key) ? 'right' undefined
+  }));
+  
+  let initialColumns = allColumnDefinitions;
+  const savedConfigJSON = localStorage : 'left', cssClass: numericCols.includes(key) ? 'numeric' : '',
+    
+    // --- PH.getItem(COLUMN_CONFIG_KEY);
+  if (savedConfigJSON) {
+      try {
+          const savedFields = JSON.parse(savedConfigJSON);
+          const savedDefs = savedFields.map(fieldẦN THAY ĐỔI 1: Sửa định dạng cột Percentage ---
+    formatter: numericCols.includes(key => allColumnDefinitions.find(def => def.field === field)).filter(Boolean);
+          if (savedDefs.length > 0) { initialColumns = savedDefs; }
+      } catch (e) { console) ? cell => cell.getValue() != null ? Number(cell.getValue()).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '' :
+               percentCols.includes(key) ? cell => cell..error("Lỗi khi tải cấu hình cột:", e); localStorage.removeItem(COLUMN_CONFIG_KEY); }
+  }
+  table = new Tabulator("#reportTable", { data: originalData, columns: initialColumns, height:getValue() != null ? `${(Number(cell.getValue()) * 100).toFixed(2)}%` : '' "100%", movableColumns: true, placeholder: "Không có dữ liệu phù hợp với bộ lọc.", rowFormatter: : undefined,
+    
+    bottomCalc: 
+        key === 'Khách hàng' ? "unique" : row => { if (row.getData()["Salesman"] === "TỔNG CỘNG") { row.getElement().style
+        key === 'Số đơn hàng' ? "unique" :
+        key === '% lương Khoán' ?.backgroundColor = "#e0f0ff"; row.getElement().style.fontWeight = "bold"; } }, column 
+            function(values, data, calcParams){
+                const totalSales = data.reduce((sum, row) =>Defaults: { tooltip: true } });
+  setupLiveFilterEvents();
+}
+
+
+// --- Các hàm còn lại giữ sum + (row["Lương khoán sales"] || 0), 0);
+                const totalRevenue = nguyên, không cần thay đổi ---
+function applyFilters() { const customerFilterValue = document.getElementById('customerFilter data.reduce((sum, row) => sum + (row["Doanh thu thuần"] || 0), ').value.toLowerCase().trim(); const dateRangeInput = document.getElementById('dateRange'); const dateRangeValue =0);
+                if(totalRevenue === 0) return "0.00%";
+                const percentage = dateRangeInput.value ? dateRangeInput.value.split(' - ') : []; const filteredData = originalData (totalSales / totalRevenue) * 100;
+                return `${percentage.toFixed(2)}%.filter(row => { const customerMatch = String(row['Khách hàng'] || '').toLowerCase().includes(customerFilterValue`;
+            } :
+        key === 'Giá bán net' ? 
+            function(values, data,); const dateMatch = !dateRangeInput.value || isDateInRange(row['Ngày giao dịch'], dateRangeValue); const calcParams){
+                const tongDT = data.reduce((s, r) => s + (r['Do checkboxMatch = FILTER_CONFIG.every(config => { const allCheckboxes = document.querySelectorAll(`#${config.anh thu thuần'] || 0), 0);
+                const tongSL = data.reduce((s, rcontainerId} input[type="checkbox"]`); if (allCheckboxes.length === 0) { return true; }) => s + (r['Số lượng'] || 0), 0);
+                return tongSL ? ( const checkedValues = getCheckedValues(config.containerId); if (checkedValues.length === 0) { return false;tongDT / tongSL).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: } const rowValue = String(row[config.field] || ''); return checkedValues.includes(rowValue); 0}) : 0;
+            } : 
+        subtotalCols.includes(key) ? " }); return customerMatch && dateMatch && checkboxMatch; }); if (table) { table.setData(filteredData); } }sum" : undefined,
+        
+    // --- PHẦN THAY ĐỔI 2: Căn giữa
+function showLoading(show = true) { document.getElementById("loading").style.display = show ? "flex" : " cho subtotal ---
+    bottomCalcFormatter: 
+        (key === 'Khách hàng' || key === 'Số đơnnone"; }
+function showColumnSelector() { const modal = document.getElementById('column-selector-modal'); const hàng') ? function(cell){ return cell.getValue(); } : // Trả về giá trị gốc để không bị định columnListDiv = document.getElementById('column-list'); const currentColumns = table.getColumns(true); const visible dạng
+        subtotalCols.includes(key) ? "money" : 
+        undefined, 
+    ColumnFields = table.getColumns().map(c => c.getField()); columnListDiv.innerHTML = ''; currentbottomCalcFormatterParams: 
+        (key === 'Khách hàng' || key === 'Số đơn hàng')Columns.forEach(column => { const field = column.getField(); const definition = column.getDefinition(); const isVisible = visibleColumnFields.includes(field); const wrapper = document.createElement('div'); wrapper.innerHTML = `<div class=" ? { hozAlign: "center" } :
+        subtotalCols.includes(key) ? { thousand: ",", precision: 0 } :
+        undefined
+  }));
+  
+  let initialColumns = allColumnDefinitions;
+form-check"><input class="form-check-input" type="checkbox" value="${field}" id="col-${field  const savedConfigJSON = localStorage.getItem(COLUMN_CONFIG_KEY);
+  if (savedConfigJSON)}" ${isVisible ? 'checked' : ''}><label class="form-check-label" for="col-${field}">${ {
+      try {
+          const savedFields = JSON.parse(savedConfigJSON);
+          const savedDefsdefinition.title}</label></div>`; columnListDiv.appendChild(wrapper); }); modal.style.display = ' = savedFields.map(field => allColumnDefinitions.find(def => def.field === field)).filter(flex'; }
+function applyColumnSelection() { const selectedFields = Array.from(document.querySelectorAll('#column-Boolean);
+          if (savedDefs.length > 0) { initialColumns = savedDefs; }
+      list input:checked')).map(cb => cb.value); if (selectedFields.length > 0) {} catch (e) { console.error("Lỗi khi tải cấu hình cột:", e); localStorage.removeItem( const newColumns = selectedFields.map(field => allColumnDefinitions.find(def => def.field === fieldCOLUMN_CONFIG_KEY); }
+  }
+  table = new Tabulator("#reportTable", { data:)).filter(Boolean); table.setColumns(newColumns); } else { alert("Bạn phải chọn ít nhất một cột để hiển thị."); } closeColumnSelector(); }
+function closeColumnSelector() { document.getElementById('column-selector-modal originalData, columns: initialColumns, height: "100%", movableColumns: true, placeholder: "Không có').style.display = 'none'; }
+function fetchDataJSONP(email, token) { showLoading(true dữ liệu phù hợp với bộ lọc.", rowFormatter: row => { if (row.getData()["Salesman"] ===); currentEmail = email; currentToken = token; const script = document.createElement('script'); script.src = "TỔNG CỘNG") { row.getElement().style.backgroundColor = "#e0f0ff"; `${API_URL}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}&callback=myCallback`; script.onerror = () => { showLoading(false); alert("Lỗi kết nối tới máy chủ dữ row.getElement().style.fontWeight = "bold"; } }, columnDefaults: { tooltip: true } });
+  setup liệu."); document.getElementById('reportTable').innerHTML = '<div class="alert alert-danger text-center mt-4">KhôngLiveFilterEvents();
+}
+
+// --- Các hàm còn lại giữ nguyên, không cần thay đổi ---
+function applyFilters() thể tải dữ liệu.</div>'; }; document.body.appendChild(script); }
+function buildFilters(data) { const customerFilterValue = document.getElementById('customerFilter').value.toLowerCase().trim(); const dateRangeInput = { FILTER_CONFIG.forEach(config => { const filterGroup = document.getElementById(config.containerId)?.parentElement; if( document.getElementById('dateRange'); const dateRangeValue = dateRangeInput.value ? dateRangeInput.value.filterGroup) filterGroup.style.display = ''; if (data.length > 0 && data[0].split(' - ') : []; const filteredData = originalData.filter(row => { const customerMatch = String(row['KhhasOwnProperty(config.field)) { const container = document.getElementById(config.containerId); if (container) {ách hàng'] || '').toLowerCase().includes(customerFilterValue); const dateMatch = !dateRangeInput.value || isDateInRange const uniqueValues = [...new Set(data.map(r => r[config.field]).filter(val => val !== null && val !== undefined))].sort(); if (uniqueValues.length > 0) { const old(row['Ngày giao dịch'], dateRangeValue); const checkboxMatch = FILTER_CONFIG.every(config => {Controls = container.previousElementSibling.querySelector('.select-controls'); if (oldControls) oldControls.remove(); container const allCheckboxes = document.querySelectorAll(`#${config.containerId} input[type="checkbox"]`); if (.innerHTML = uniqueValues.map(v => { const label = v === '' ? '(Trống)' : vallCheckboxes.length === 0) { return true; } const checkedValues = getCheckedValues(config.containerId; return `<div><label><input type="checkbox" value="${v}" checked /> ${label}</label></div>`; }).join(''); const labelElement = container.previousElementSibling; if (labelElement && labelElement.tagName === '); if (checkedValues.length === 0) { return false; } const rowValue = String(row[config.fieldLABEL') { const controls = document.createElement('span'); controls.className = 'select-controls'; controls.innerHTML] || ''); return checkedValues.includes(rowValue); }); return customerMatch && dateMatch && checkboxMatch; }); if ( = `(<a href="#" class="select-all" data-target="${config.containerId}">Tất cảtable) { table.setData(filteredData); } }
+function showLoading(show = true) { document.</a> | <a href="#" class="deselect-all" data-target="${config.containerId}">Bỏ chọngetElementById("loading").style.display = show ? "flex" : "none"; }
+function showColumnSelector()</a>)`; labelElement.appendChild(controls); } } else { container.parentElement.style.display = 'none'; } } } else { const container = document.getElementById(config.containerId); if (container) container.parentElement { const modal = document.getElementById('column-selector-modal'); const columnListDiv = document.getElementById('column-list'); const currentColumns = table.getColumns(true); const visibleColumnFields = table.getColumns()..style.display = 'none'; } }); }
+function getCheckedValues(containerId) { const checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]`); return Array.from(checkboxes).filter(cb =>map(c => c.getField()); columnListDiv.innerHTML = ''; currentColumns.forEach(column => { const field = column.getField(); const definition = column.getDefinition(); const isVisible = visibleColumnFields.includes(field); const cb.checked).map(cb => cb.value); }
+function isDateInRange(dateStr, range) { if (!dateStr || !range || range.length < 2) return false; try { const [day, month wrapper = document.createElement('div'); wrapper.innerHTML = `<div class="form-check"><input class="form-check, year] = dateStr.split('/'); const date = new Date(`${year}-${month}-${day}`); const startDate = new Date(-input" type="checkbox" value="${field}" id="col-${field}" ${isVisible ? 'checked' : ''}range[0].split('/').reverse().join('-')); const endDate = new Date(range[1].split('/').reverse><label class="form-check-label" for="col-${field}">${definition.title}</label></div>`;().join('-')); return date >= startDate && date <= endDate; } catch(e) { return false; } } columnListDiv.appendChild(wrapper); }); modal.style.display = 'flex'; }
+function applyColumnSelection
+function setupLiveFilterEvents() { document.getElementById('customerFilter').addEventListener('input', applyFilters); document.querySelectorAll('.filter() { const selectedFields = Array.from(document.querySelectorAll('#column-list input:checked')).map(cb-group').forEach(group => { group.addEventListener('click', (e) => { const target = e.target; => cb.value); if (selectedFields.length > 0) { const newColumns = selectedFields.map if (target.tagName === 'A' && (target.classList.contains('select-all') || target.(field => allColumnDefinitions.find(def => def.field === field)).filter(Boolean); table.setColumns(classList.contains('deselect-all'))) { e.preventDefault(); const containerId = target.dataset.target; const checkStatus = target.classList.contains('select-all'); if (containerId) { document.querySelectorAll(`#${containerId}newColumns); } else { alert("Bạn phải chọn ít nhất một cột để hiển thị."); } closeColumnSelector(); } input[type="checkbox"]`).forEach(cb => cb.checked = checkStatus); applyFilters(); } } }); const checkbox
+function closeColumnSelector() { document.getElementById('column-selector-modal').style.display = 'none';Group = group.querySelector('.checkbox-group'); if (checkboxGroup) { checkboxGroup.addEventListener('change', applyFilters); } }
+function fetchDataJSONP(email, token) { showLoading(true); currentEmail = email; currentToken }); new Litepicker({ element: document.getElementById('dateRange'), singleMode: false, format: "DD/MM/ = token; const script = document.createElement('script'); script.src = `${API_URL}?email=${encodeYYYY", autoApply: false, setup: (picker) => { picker.on('selected', () => applyFilters()); picker.URIComponent(email)}&token=${encodeURIComponent(token)}&callback=myCallback`; script.onerror = () =>on('clear:selection', () => applyFilters()); } }); }
+window.onload = () => { const email = localStorage.getItem("report_email") || prompt("Nhập email:"); const token = localStorage.getItem("report_token { showLoading(false); alert("Lỗi kết nối tới máy chủ dữ liệu."); document.getElementById('reportTable") || prompt("Nhập token:"); if (!email || !token) { showLoading(false); document.getElementById').innerHTML = '<div class="alert alert-danger text-center mt-4">Không thể tải dữ liệu.</div>'; };('reportTable').innerHTML = '<div class="alert alert-warning text-center mt-4">Yêu cầu document.body.appendChild(script); }
+function buildFilters(data) { FILTER_CONFIG.forEach(config xác thực không thành công.</div>'; return; } fetchDataJSONP(email, token); };
+document.getElementById => { if (data.length > 0 && data[0].hasOwnProperty(config.field)) { const container('btn-toggle-cols').addEventListener('click', () => { if (table) showColumnSelector(); else alert("Vui lòng đợi dữ liệu tải xong."); });
+document.getElementById('btn-export').addEventListener('click', = document.getElementById(config.containerId); if (container) { const uniqueValues = [...new Set(data () => { if (table) table.download("xlsx", "bao_cao_ban_hang.xlsx", { sheetName: "BaoCaoBanHang" }); else alert("Không có dữ liệu để xuất."); });
+.map(r => r[config.field]).filter(val => val !== null && val !== undefined))].sort(); if (uniqueValues.length > 0) { const oldControls = container.previousElementSibling.querySelector('.document.getElementById('btn-apply-selection').addEventListener('click', applyColumnSelection);
+document.getElementById('btn-cancel-selection').addEventListener('click', closeColumnSelector);
+document.getElementById('column-selector-modal').select-controls'); if (oldControls) oldControls.remove(); container.innerHTML = uniqueValues.map(v => { constaddEventListener('click', (e) => { if (e.target.id === 'column-selector-modal') label = v === '' ? '(Trống)' : v; return `<div><label><input type="checkbox" closeColumnSelector(); });
+document.getElementById('btn-save-layout').addEventListener('click', () => { if (!table) return alert("Vui lòng đợi dữ liệu tải xong."); const currentVisibleColumns = table.getColumns value="${v}" checked /> ${label}</label></div>`; }).join(''); const labelElement = container.previousElementSibling().map(c => c.getField()); localStorage.setItem(COLUMN_CONFIG_KEY, JSON.stringify(currentVisibleColumns)); alert("Cấu hình cột đã được lưu thành công!"); });
+document.getElementById('btn-reset-; if (labelElement && labelElement.tagName === 'LABEL') { const controls = document.createElement('span'); controls.className = 'select-controls'; controls.innerHTML = `(<a href="#" class="select-all"layout').addEventListener('click', () => { if (!table) return alert("Vui lòng đợi dữ liệu tải xong."); if (confirm('Bạn có chắc muốn xóa cấu hình đã lưu và quay về mặc định không?')) { localStorage data-target="${config.containerId}">Tất cả</a> | <a href="#" class="deselect-all" data.removeItem(COLUMN_CONFIG_KEY); table.setColumns(allColumnDefinitions); alert("Cấu hình cột-target="${config.containerId}">Bỏ chọn</a>)`; labelElement.appendChild(controls); } } else { đã được trả về mặc định."); } });
+</script>
+</body>
+</html>
