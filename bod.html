@@ -65,6 +65,9 @@
     <input id="dateRange" class="form-control mb-2" />
     <label for="customerFilter">Khách hàng</label>
     <input id="customerFilter" class="form-control mb-2" placeholder="Tên khách hàng" />
+    <label for="batchFilter">Mã lô hàng</label>
+    <input id="batchFilter" class="form-control mb-2" placeholder="Mã lô hàng" />
+    
     <div class="filter-group"><label>Salesman</label><div id="salesman-filter-container" class="checkbox-group"></div></div>
     <div class="filter-group"><label>Nhóm sản Phẩm</label><div id="nhom-san-pham-filter-container" class="checkbox-group"></div></div>
     <div class="filter-group"><label>Loại xuất</label><div id="loai-xuat-filter-container" class="checkbox-group"></div></div>
@@ -75,8 +78,8 @@
   </div>
 
   <div id="reportArea">
-    <img id="company-logo" src="https://i.imgur.com/DrxQhMN.png" alt="Company Logo" style='width:155px; height:60px;'>
-    <h2 class="text-center text-primary mt-2"><strong>CHI TIẾT HIỆU QUẢ BÁN HÀNG</strong></h2>
+    <img id="company-logo" src="https://i.imgur.com/DrxQhMN.png" alt="Company Logo">
+    <h2 class="text-center text-primary mt-2">CHI TIẾT HIỆU QUẢ BÁN HÀNG</h2>
     <div class="d-flex justify-content-end align-items-center px-3 mb-2">
       <button id="btn-save-layout" class="btn btn-info btn-sm me-2">Lưu Cấu hình</button>
       <button id="btn-reset-layout" class="btn btn-warning btn-sm me-2">Reset Cấu hình</button>
@@ -91,12 +94,12 @@
 <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+// --- Các hằng số và biến toàn cục giữ nguyên ---
 const API_URL = 'https://script.google.com/macros/s/AKfycbzyp38Q_CMRhhOFnZJep73kMxvRwbFpzZhwSqFcGrxSn0ulAyv35hqc370rQxWIbh49/exec';
 const COLUMN_CONFIG_KEY = 'salesReportColumnConfig';
 let table, originalData = [];
 let allColumnDefinitions = [];
 let currentEmail = "", currentToken = "";
-
 const numericCols = ["Số lượng", "Doanh thu thuần", "Đơn giá", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Giá bán net", "Giá bán tiêu chuẩn", "Lãi gộp tính lương B2B", "LK tiêu chuẩn", "Điều chỉnh lương khoán KD", "Lương khoán tối thiểu", "Lương khoán/kg", "LK Đức HM", "Lương khoán sales"];
 const percentCols = ["% Lãi gộp tiêu chuẩn", "% Điều chỉnh trên giá", "% Điều chỉnh dưới giá", "% lương Khoán"];
 const subtotalCols = ["Số lượng", "Doanh thu thuần", "COGS", "Lãi gộp", "Chi phí giao hàng", "Lãi vay", "Lãi gộp tính lương B2B", "LK Đức HM", "Lương khoán sales"];
@@ -110,6 +113,51 @@ const FILTER_CONFIG = [
   { field: 'Năm', containerId: 'year-filter-container' }
 ];
 
+/**
+ * ✅ ĐÃ SỬA: Viết lại hàm này để gắn sự kiện một cách rõ ràng và trực tiếp.
+ */
+function setupLiveFilterEvents() {
+    // 1. Gắn sự kiện LIVE cho các ô text input trực tiếp bằng ID
+    document.getElementById('customerFilter').addEventListener('input', applyFilters);
+    document.getElementById('batchFilter').addEventListener('input', applyFilters);
+
+    // 2. Gắn sự kiện LIVE cho các nhóm checkbox và nút "Tất cả/Bỏ chọn"
+    document.querySelectorAll('.filter-group').forEach(group => {
+        // Sự kiện cho các nút "Tất cả" / "Bỏ chọn"
+        group.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.tagName === 'A' && (target.classList.contains('select-all') || target.classList.contains('deselect-all'))) {
+                e.preventDefault();
+                const containerId = target.dataset.target;
+                const checkStatus = target.classList.contains('select-all');
+                if (containerId) {
+                    document.querySelectorAll(`#${containerId} input[type="checkbox"]`).forEach(cb => cb.checked = checkStatus);
+                    applyFilters();
+                }
+            }
+        });
+        // Sự kiện cho chính các checkbox
+        const checkboxGroup = group.querySelector('.checkbox-group');
+        if (checkboxGroup) {
+            checkboxGroup.addEventListener('change', applyFilters);
+        }
+    });
+    
+    // 3. Gắn sự kiện LIVE cho bộ chọn ngày
+    new Litepicker({ 
+        element: document.getElementById('dateRange'), 
+        singleMode: false, 
+        format: "DD/MM/YYYY",
+        autoApply: false,
+        setup: (picker) => {
+            picker.on('selected', () => applyFilters());
+            picker.on('clear:selection', () => applyFilters());
+        }
+    });
+}
+
+
+// --- Các hàm còn lại không cần thay đổi ---
 function myCallback(data) {
   showLoading(false);
   if (!Array.isArray(data) || (Array.isArray(data) && data.length > 0 && typeof data[0] !== 'object')) {
@@ -136,10 +184,7 @@ function myCallback(data) {
 
   allColumnDefinitions = Object.keys(originalData[0]).map(key => {
     const columnDef = {
-        title: key, 
-        field: key, 
-        hozAlign: numericCols.includes(key) || percentCols.includes(key) ? 'right' : 'left', 
-        cssClass: numericCols.includes(key) ? 'numeric' : '',
+        title: key, field: key, hozAlign: numericCols.includes(key) || percentCols.includes(key) ? 'right' : 'left', cssClass: numericCols.includes(key) ? 'numeric' : '',
         formatter: 
             percentCols.includes(key) 
             ? cell => cell.getValue() != null ? `${(Number(cell.getValue()) * 100).toFixed(2)}%` : '' 
@@ -148,37 +193,12 @@ function myCallback(data) {
                 : undefined,
         bottomCalc: undefined
     };
-
-    if (key === 'Khách hàng' || key === 'Số đơn hàng') {
-        columnDef.bottomCalc = "unique";
-    } else if (key === '% lương Khoán') {
-        columnDef.bottomCalc = (values, data) => {
-            const totalSales = data.reduce((sum, row) => sum + (row["Lương khoán sales"] || 0), 0);
-            const totalRevenue = data.reduce((sum, row) => sum + (row["Doanh thu thuần"] || 0), 0);
-            if(totalRevenue === 0) return "0.00%";
-            const percentage = (totalSales / totalRevenue) * 100;
-            return `${percentage.toFixed(2)}%`;
-        };
-    } else if (key === 'Giá bán net') {
-        columnDef.bottomCalc = (values, data) => {
-            const tongDT = data.reduce((s, r) => s + (r['Doanh thu thuần'] || 0), 0);
-            const tongSL = data.reduce((s, r) => s + (r['Số lượng'] || 0), 0);
-            return tongSL ? (tongDT / tongSL).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : 0;
-        };
-    } else if (subtotalCols.includes(key)) {
-        columnDef.bottomCalc = "sum";
-    }
-
-    if (key === 'Khách hàng' || key === 'Số đơn hàng') {
-        columnDef.bottomCalcFormatter = function(cell){
-            const value = cell.getValue();
-            return `<div style="text-align: center;">${value}</div>`;
-        }
-    } else if (subtotalCols.includes(key)) {
-        columnDef.bottomCalcFormatter = "money";
-        columnDef.bottomCalcFormatterParams = { thousand: ",", precision: 0 };
-    }
-
+    if (key === 'Khách hàng' || key === 'Số đơn hàng') { columnDef.bottomCalc = "unique";
+    } else if (key === '% lương Khoán') { columnDef.bottomCalc = (values, data) => { const totalSales = data.reduce((sum, row) => sum + (row["Lương khoán sales"] || 0), 0); const totalRevenue = data.reduce((sum, row) => sum + (row["Doanh thu thuần"] || 0), 0); if(totalRevenue === 0) return "0.00%"; const percentage = (totalSales / totalRevenue) * 100; return `${percentage.toFixed(2)}%`; };
+    } else if (key === 'Giá bán net') { columnDef.bottomCalc = (values, data) => { const tongDT = data.reduce((s, r) => s + (r['Doanh thu thuần'] || 0), 0); const tongSL = data.reduce((s, r) => s + (r['Số lượng'] || 0), 0); return tongSL ? (tongDT / tongSL).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : 0; };
+    } else if (subtotalCols.includes(key)) { columnDef.bottomCalc = "sum"; }
+    if (key === 'Khách hàng' || key === 'Số đơn hàng') { columnDef.bottomCalcFormatter = function(cell){ const value = cell.getValue(); return `<div style="text-align: center;">${value}</div>`; }
+    } else if (subtotalCols.includes(key)) { columnDef.bottomCalcFormatter = "money"; columnDef.bottomCalcFormatterParams = { thousand: ",", precision: 0 }; }
     return columnDef;
   });
   
@@ -194,8 +214,7 @@ function myCallback(data) {
   table = new Tabulator("#reportTable", { data: originalData, columns: initialColumns, height: "100%", movableColumns: true, placeholder: "Không có dữ liệu phù hợp với bộ lọc.", rowFormatter: row => { if (row.getData()["Salesman"] === "TỔNG CỘNG") { row.getElement().style.backgroundColor = "#e0f0ff"; row.getElement().style.fontWeight = "bold"; } }, columnDefaults: { tooltip: true } });
   setupLiveFilterEvents();
 }
-
-function applyFilters() { const customerFilterValue = document.getElementById('customerFilter').value.toLowerCase().trim(); const dateRangeInput = document.getElementById('dateRange'); const dateRangeValue = dateRangeInput.value ? dateRangeInput.value.split(' - ') : []; const filteredData = originalData.filter(row => { const customerMatch = String(row['Khách hàng'] || '').toLowerCase().includes(customerFilterValue); const dateMatch = !dateRangeInput.value || isDateInRange(row['Ngày giao dịch'], dateRangeValue); const checkboxMatch = FILTER_CONFIG.every(config => { const allCheckboxes = document.querySelectorAll(`#${config.containerId} input[type="checkbox"]`); if (allCheckboxes.length === 0) { return true; } const checkedValues = getCheckedValues(config.containerId); if (checkedValues.length === 0) { return false; } const rowValue = String(row[config.field] || ''); return checkedValues.includes(rowValue); }); return customerMatch && dateMatch && checkboxMatch; }); if (table) { table.setData(filteredData); } }
+function applyFilters() { const customerFilterValue = document.getElementById('customerFilter').value.toLowerCase().trim(); const batchFilterValue = document.getElementById('batchFilter').value.toLowerCase().trim(); const dateRangeInput = document.getElementById('dateRange'); const dateRangeValue = dateRangeInput.value ? dateRangeInput.value.split(' - ') : []; const filteredData = originalData.filter(row => { const customerMatch = String(row['Khách hàng'] || '').toLowerCase().includes(customerFilterValue); const batchMatch = String(row['Mã lô hàng'] || '').toLowerCase().includes(batchFilterValue); const dateMatch = !dateRangeInput.value || isDateInRange(row['Ngày giao dịch'], dateRangeValue); const checkboxMatch = FILTER_CONFIG.every(config => { const allCheckboxes = document.querySelectorAll(`#${config.containerId} input[type="checkbox"]`); if (allCheckboxes.length === 0) return true; const checkedValues = getCheckedValues(config.containerId); if (checkedValues.length === 0) return false; const rowValue = String(row[config.field] || ''); return checkedValues.includes(rowValue); }); return customerMatch && batchMatch && dateMatch && checkboxMatch; }); if (table) { table.setData(filteredData); } }
 function showLoading(show = true) { document.getElementById("loading").style.display = show ? "flex" : "none"; }
 function showColumnSelector() { const modal = document.getElementById('column-selector-modal'); const columnListDiv = document.getElementById('column-list'); const currentColumns = table.getColumns(true); const visibleColumnFields = table.getColumns().map(c => c.getField()); columnListDiv.innerHTML = ''; currentColumns.forEach(column => { const field = column.getField(); const definition = column.getDefinition(); const isVisible = visibleColumnFields.includes(field); const wrapper = document.createElement('div'); wrapper.innerHTML = `<div class="form-check"><input class="form-check-input" type="checkbox" value="${field}" id="col-${field}" ${isVisible ? 'checked' : ''}><label class="form-check-label" for="col-${field}">${definition.title}</label></div>`; columnListDiv.appendChild(wrapper); }); modal.style.display = 'flex'; }
 function applyColumnSelection() { const selectedFields = Array.from(document.querySelectorAll('#column-list input:checked')).map(cb => cb.value); if (selectedFields.length > 0) { const newColumns = selectedFields.map(field => allColumnDefinitions.find(def => def.field === field)).filter(Boolean); table.setColumns(newColumns); } else { alert("Bạn phải chọn ít nhất một cột để hiển thị."); } closeColumnSelector(); }
@@ -204,7 +223,6 @@ function fetchDataJSONP(email, token) { showLoading(true); currentEmail = email;
 function buildFilters(data) { FILTER_CONFIG.forEach(config => { const filterGroup = document.getElementById(config.containerId)?.parentElement; if(filterGroup) filterGroup.style.display = ''; if (data.length > 0 && data[0].hasOwnProperty(config.field)) { const container = document.getElementById(config.containerId); if (container) { const uniqueValues = [...new Set(data.map(r => r[config.field]).filter(val => val !== null && val !== undefined))].sort(); if (uniqueValues.length > 0) { const oldControls = container.previousElementSibling.querySelector('.select-controls'); if (oldControls) oldControls.remove(); container.innerHTML = uniqueValues.map(v => { const label = v === '' ? '(Trống)' : v; return `<div><label><input type="checkbox" value="${v}" checked /> ${label}</label></div>`; }).join(''); const labelElement = container.previousElementSibling; if (labelElement && labelElement.tagName === 'LABEL') { const controls = document.createElement('span'); controls.className = 'select-controls'; controls.innerHTML = `(<a href="#" class="select-all" data-target="${config.containerId}">Tất cả</a> | <a href="#" class="deselect-all" data-target="${config.containerId}">Bỏ chọn</a>)`; labelElement.appendChild(controls); } } else { container.parentElement.style.display = 'none'; } } } else { const container = document.getElementById(config.containerId); if (container) container.parentElement.style.display = 'none'; } }); }
 function getCheckedValues(containerId) { const checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]`); return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value); }
 function isDateInRange(dateStr, range) { if (!dateStr || !range || range.length < 2) return false; try { const [day, month, year] = dateStr.split('/'); const date = new Date(`${year}-${month}-${day}`); const startDate = new Date(range[0].split('/').reverse().join('-')); const endDate = new Date(range[1].split('/').reverse().join('-')); return date >= startDate && date <= endDate; } catch(e) { return false; } }
-function setupLiveFilterEvents() { document.getElementById('customerFilter').addEventListener('input', applyFilters); document.querySelectorAll('.filter-group').forEach(group => { group.addEventListener('click', (e) => { const target = e.target; if (target.tagName === 'A' && (target.classList.contains('select-all') || target.classList.contains('deselect-all'))) { e.preventDefault(); const containerId = target.dataset.target; const checkStatus = target.classList.contains('select-all'); if (containerId) { document.querySelectorAll(`#${containerId} input[type="checkbox"]`).forEach(cb => cb.checked = checkStatus); applyFilters(); } } }); const checkboxGroup = group.querySelector('.checkbox-group'); if (checkboxGroup) { checkboxGroup.addEventListener('change', applyFilters); } }); new Litepicker({ element: document.getElementById('dateRange'), singleMode: false, format: "DD/MM/YYYY", autoApply: false, setup: (picker) => { picker.on('selected', () => applyFilters()); picker.on('clear:selection', () => applyFilters()); } }); }
 window.onload = () => { const email = localStorage.getItem("report_email") || prompt("Nhập email:"); const token = localStorage.getItem("report_token") || prompt("Nhập token:"); if (!email || !token) { showLoading(false); document.getElementById('reportTable').innerHTML = '<div class="alert alert-warning text-center mt-4">Yêu cầu xác thực không thành công.</div>'; return; } fetchDataJSONP(email, token); };
 document.getElementById('btn-toggle-cols').addEventListener('click', () => { if (table) showColumnSelector(); else alert("Vui lòng đợi dữ liệu tải xong."); });
 document.getElementById('btn-export').addEventListener('click', () => { if (table) table.download("xlsx", "bao_cao_ban_hang.xlsx", { sheetName: "BaoCaoBanHang" }); else alert("Không có dữ liệu để xuất."); });
