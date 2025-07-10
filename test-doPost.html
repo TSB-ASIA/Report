@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Test WebApp doPost()</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    button { padding: 8px 16px; margin-top: 12px; }
+    pre { background: #f4f4f4; padding: 1rem; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h2>Test WebApp doPost() từ HTML</h2>
+  <p><strong>Email:</strong> bien.trinh@tsb.asia</p>
+  <p><strong>Token:</strong> 1</p>
+  <button onclick="callAPI()">Gửi yêu cầu</button>
+
+  <h3>Kết quả phản hồi:</h3>
+  <pre id="output">Chưa gửi yêu cầu...</pre>
+
+  <script>
+    async function callAPI() {
+      const response = await fetch("https://script.google.com/macros/s/AKfycbwibM__i5qe75Iu1eBoenbhJDBFPtfBskHYOrHU9B8TZFcfQYUZlltEyHsXUWWsyqMmFg/exec", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: "bien.trinh@tsb.asia",
+          token: "1"
+        })
+      });
+
+      const data = await response.json();
+      document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>
